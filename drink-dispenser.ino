@@ -14,10 +14,6 @@ void setup()
     setupBoards();
     // When the power is turned on, a delay is required.
     delay(1500);
-    Serial.println("LMIC-Arduino library only support SX1276 Radio ...");
-    Serial.println("LMIC-Arduino library only support SX1276 Radio ...");
-    Serial.println("LMIC-Arduino library only support SX1276 Radio ...");
-    Serial.println("LMIC-Arduino library only support SX1276 Radio ...");
     setupLMIC();
 }
 
