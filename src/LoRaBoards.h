@@ -1,19 +1,6 @@
-/**
- * @file      boards.h
- * @author    Lewis He (lewishe@outlook.com)
- * @license   MIT
- * @copyright Copyright (c) 2024  ShenZhen XinYuan Electronic Technology Co., Ltd
- * @date      2024-04-25
- * @last-update 2024-08-07
- */
-
 #pragma once
 
 #include "utilities.h"
-
-#ifdef HAS_SDCARD
-#include <SD.h>
-#endif
 
 #if defined(ARDUINO_ARCH_ESP32)
 #include <FS.h>
@@ -102,25 +89,13 @@ void loopPMU(void (*pressed_cb)(void));
 
 void scanWiFi();
 
-#ifdef HAS_PMU
 extern XPowersLibInterface *PMU;
 extern bool pmuInterrupt;
-#endif
 extern DISPLAY_MODEL *u8g2;
 
 #define U8G2_HOR_ALIGN_CENTER(t) ((u8g2->getDisplayWidth() - (u8g2->getUTF8Width(t))) / 2)
 #define U8G2_HOR_ALIGN_RIGHT(t) (u8g2->getDisplayWidth() - u8g2->getUTF8Width(t))
-
-#if defined(ARDUINO_ARCH_ESP32)
-
-#if defined(HAS_SDCARD)
-extern SPIClass SDCardSPI;
-#endif
-
 #define SerialGPS Serial1
-#elif defined(ARDUINO_ARCH_STM32)
-extern HardwareSerial SerialGPS;
-#endif
 
 float getTempForNTC();
 
