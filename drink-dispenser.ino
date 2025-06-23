@@ -1,7 +1,7 @@
 /**
  * @file      OTAA.ino
- * LMIC-Arduino library only support SX1276 Radio 
- * Test Devices : 
+ * LMIC-Arduino library only support SX1276 Radio
+ * Test Devices :
  *  T_MOTION
  *  T3_S3_V1_2_SX1276
  *  T_BEAM_SX1276
@@ -21,4 +21,3 @@ void loop()
 {
     loopLMIC();
 }
-
