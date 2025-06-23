@@ -23,7 +23,7 @@ static const u1_t PROGMEM DEVEUI[8] = {0x61, 0x34, 0x1B, 0x00, 0x00, 0xAC, 0x59,
 // MSB mode
 static const u1_t PROGMEM APPKEY[16] = LORAWAN_APPKEY;
 
-static uint8_t mydata[] = "Hello, new!";
+static uint8_t mydata[] = "Hello, new.io!";
 
 // Pin mapping
 #ifdef STM32L073xx
@@ -101,8 +101,8 @@ void onEvent(ev_t ev)
         break;
     case EV_JOINED:
         Serial.println(F("EV_JOINED"));
-        os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
-        break;
+        os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(10), do_send);
+
         // Disable link check validation (automatically enabled
         // during join, but because slow data rates change max TX
         // size, we don't use it in this example.
