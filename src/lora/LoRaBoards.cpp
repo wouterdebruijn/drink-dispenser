@@ -17,14 +17,6 @@
 #include <BLEServer.h>
 #endif
 
-#if defined(HAS_SDCARD) && !defined(SD_SHARE_SPI_BUS)
-SPIClass SDCardSPI(HSPI);
-#endif
-
-#if defined(ARDUINO_ARCH_STM32)
-HardwareSerial SerialGPS(GPS_RX_PIN, GPS_TX_PIN);
-#endif
-
 #if defined(ARDUINO_ARCH_ESP32)
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 #include "hal/gpio_hal.h"
@@ -32,7 +24,6 @@ HardwareSerial SerialGPS(GPS_RX_PIN, GPS_TX_PIN);
 #include "driver/gpio.h"
 #endif // ARDUINO_ARCH_ESP32
 
-DISPLAY_MODEL *u8g2 = NULL;
 static DevInfo_t devInfo;
 
 #ifdef HAS_GPS
@@ -171,93 +162,6 @@ bool beginPower()
 
 #endif /*CONFIG_IDF_TARGET_ESP32*/
 
-#if defined(T_BEAM_S3_SUPREME)
-
-        // t-beam m.2 inface
-        // gps
-        PMU->setPowerChannelVoltage(XPOWERS_ALDO4, 3300);
-        PMU->enablePowerOutput(XPOWERS_ALDO4);
-
-        // lora
-        PMU->setPowerChannelVoltage(XPOWERS_ALDO3, 3300);
-        PMU->enablePowerOutput(XPOWERS_ALDO3);
-
-        // In order to avoid bus occupation, during initialization, the SD card and QMC sensor are powered off and restarted
-        if (ESP_SLEEP_WAKEUP_UNDEFINED == esp_sleep_get_wakeup_cause())
-        {
-            Serial.println("Power off and restart ALDO BLDO..");
-            PMU->disablePowerOutput(XPOWERS_ALDO1);
-            PMU->disablePowerOutput(XPOWERS_ALDO2);
-            PMU->disablePowerOutput(XPOWERS_BLDO1);
-            delay(250);
-        }
-
-        // Sensor
-        PMU->setPowerChannelVoltage(XPOWERS_ALDO1, 3300);
-        PMU->enablePowerOutput(XPOWERS_ALDO1);
-
-        PMU->setPowerChannelVoltage(XPOWERS_ALDO2, 3300);
-        PMU->enablePowerOutput(XPOWERS_ALDO2);
-
-        // Sdcard
-
-        PMU->setPowerChannelVoltage(XPOWERS_BLDO1, 3300);
-        PMU->enablePowerOutput(XPOWERS_BLDO1);
-
-        PMU->setPowerChannelVoltage(XPOWERS_BLDO2, 3300);
-        PMU->enablePowerOutput(XPOWERS_BLDO2);
-
-        // face m.2
-        PMU->setPowerChannelVoltage(XPOWERS_DCDC3, 3300);
-        PMU->enablePowerOutput(XPOWERS_DCDC3);
-
-        PMU->setPowerChannelVoltage(XPOWERS_DCDC4, XPOWERS_AXP2101_DCDC4_VOL2_MAX);
-        PMU->enablePowerOutput(XPOWERS_DCDC4);
-
-        PMU->setPowerChannelVoltage(XPOWERS_DCDC5, 3300);
-        PMU->enablePowerOutput(XPOWERS_DCDC5);
-
-        // not use channel
-        PMU->disablePowerOutput(XPOWERS_DCDC2);
-        // PMU->disablePowerOutput(XPOWERS_DCDC4);
-        // PMU->disablePowerOutput(XPOWERS_DCDC5);
-        PMU->disablePowerOutput(XPOWERS_DLDO1);
-        PMU->disablePowerOutput(XPOWERS_DLDO2);
-        PMU->disablePowerOutput(XPOWERS_VBACKUP);
-
-#elif defined(T_BEAM_S3_BPF)
-
-        // gps
-        PMU->setPowerChannelVoltage(XPOWERS_ALDO4, 3300);
-        PMU->enablePowerOutput(XPOWERS_ALDO4);
-
-        // Sdcard
-        PMU->setPowerChannelVoltage(XPOWERS_ALDO2, 3300);
-        PMU->enablePowerOutput(XPOWERS_ALDO2);
-
-        // Extern Power source
-        PMU->setPowerChannelVoltage(XPOWERS_DCDC3, 3300);
-        PMU->enablePowerOutput(XPOWERS_DCDC3);
-
-        PMU->setPowerChannelVoltage(XPOWERS_DCDC5, 3300);
-        PMU->enablePowerOutput(XPOWERS_DCDC5);
-
-        PMU->setPowerChannelVoltage(XPOWERS_ALDO1, 3300);
-        PMU->enablePowerOutput(XPOWERS_ALDO1);
-
-        // not use channel
-        PMU->disablePowerOutput(XPOWERS_BLDO1);
-        PMU->disablePowerOutput(XPOWERS_BLDO2);
-        PMU->disablePowerOutput(XPOWERS_DCDC4);
-        PMU->disablePowerOutput(XPOWERS_DCDC2);
-        PMU->disablePowerOutput(XPOWERS_DCDC4);
-        PMU->disablePowerOutput(XPOWERS_DCDC5);
-        PMU->disablePowerOutput(XPOWERS_DLDO1);
-        PMU->disablePowerOutput(XPOWERS_DLDO2);
-        PMU->disablePowerOutput(XPOWERS_VBACKUP);
-
-#endif
-
         // Set constant current charge current limit
         PMU->setChargerConstantCurr(XPOWERS_AXP2101_CHG_CUR_500MA);
 
@@ -377,14 +281,6 @@ void disablePeripherals()
     PMU->disableTemperatureMeasure();
     PMU->disableBattDetection();
 
-#if defined(T_BEAM_S3_BPF)
-    PMU->disablePowerOutput(XPOWERS_ALDO4); // gps
-    PMU->disablePowerOutput(XPOWERS_ALDO2); // Sdcard
-    PMU->disablePowerOutput(XPOWERS_DCDC3); // Extern Power source
-    PMU->disablePowerOutput(XPOWERS_DCDC5);
-    PMU->disablePowerOutput(XPOWERS_ALDO1);
-#else
-
     if (PMU->getChipModel() == XPOWERS_AXP2101)
     {
 
@@ -398,16 +294,6 @@ void disablePeripherals()
         PMU->disablePowerOutput(XPOWERS_ALDO2);
         // GNSS VDD
         PMU->disablePowerOutput(XPOWERS_ALDO3);
-
-#if defined(T_BEAM_S3_SUPREME)
-        PMU->disablePowerOutput(XPOWERS_ALDO4);
-        PMU->disablePowerOutput(XPOWERS_ALDO1);
-        PMU->disablePowerOutput(XPOWERS_BLDO1);
-        PMU->disablePowerOutput(XPOWERS_BLDO2);
-        PMU->disablePowerOutput(XPOWERS_DCDC3);
-        PMU->disablePowerOutput(XPOWERS_DCDC4);
-        PMU->disablePowerOutput(XPOWERS_DCDC5);
-#endif
     }
     else if (PMU->getChipModel() == XPOWERS_AXP192)
     {
@@ -421,7 +307,6 @@ void disablePeripherals()
         // GNSS VDD
         PMU->disablePowerOutput(XPOWERS_LDO3);
     }
-#endif
 #endif
 }
 
@@ -486,121 +371,6 @@ void loopPMU(void (*pressed_cb)(void))
 #endif
 }
 
-bool beginDisplay()
-{
-    Wire.beginTransmission(DISPLAY_ADDR);
-    if (Wire.endTransmission() == 0)
-    {
-        Serial.printf("Find Display model at 0x%X address\n", DISPLAY_ADDR);
-        u8g2 = new DISPLAY_MODEL(U8G2_R0, U8X8_PIN_NONE);
-        u8g2->begin();
-        u8g2->clearBuffer();
-        u8g2->setFont(u8g2_font_inb19_mr);
-        u8g2->drawStr(0, 30, "LilyGo");
-        u8g2->drawHLine(2, 35, 47);
-        u8g2->drawHLine(3, 36, 47);
-        u8g2->drawVLine(45, 32, 12);
-        u8g2->drawVLine(46, 33, 12);
-        u8g2->setFont(u8g2_font_inb19_mf);
-        u8g2->drawStr(58, 60, "LoRa");
-        u8g2->sendBuffer();
-        u8g2->setFont(u8g2_font_fur11_tf);
-        delay(3000);
-        return true;
-    }
-
-    Serial.printf("Warning: Failed to find Display at 0x%0X address\n", DISPLAY_ADDR);
-    return false;
-}
-
-#ifdef HAS_SDCARD
-bool writeFile(const char *path, const char *buffer)
-{
-    bool rlst = false;
-    File file = SD.open(path, FILE_WRITE);
-    if (!file)
-    {
-        Serial.println("Failed to open file for writing");
-        return false;
-    }
-    if (file.print(buffer))
-    {
-        Serial.println("File written");
-        rlst = true;
-    }
-    else
-    {
-        Serial.println("Write failed");
-        rlst = false;
-    }
-    file.close();
-    return rlst;
-}
-
-bool readFile(const char *path, uint8_t *buffer, size_t size)
-{
-    File file = SD.open(path, FILE_READ);
-    if (!file)
-    {
-        Serial.println("Failed to open file for reading");
-        return false;
-    }
-    file.read(buffer, size);
-    file.close();
-    return false;
-}
-
-bool testSDWriteAndRead()
-{
-    const char *path = "/test_sd.txt";
-    const char *message = "This is a string for reading and writing SD card.";
-    uint8_t buffer[128] = {0};
-
-    if (!writeFile(path, message))
-    {
-        Serial.println("SD Text write failed");
-        return false;
-    }
-    delay(100);
-
-    readFile(path, buffer, 128);
-
-    if (memcmp(buffer, message, strlen(message)) != 0)
-    {
-        Serial.println("SD verification failed");
-        return false;
-    }
-    Serial.println("SD verification successful");
-    return true;
-}
-#endif /*HAS_SDCARD*/
-
-bool beginSDCard()
-{
-#ifdef HAS_SDCARD
-#if defined(HAS_SDCARD) && defined(SD_SHARE_SPI_BUS)
-    bool rlst = SD.begin(SDCARD_CS);
-#else
-    bool rlst = SD.begin(SDCARD_CS, SDCardSPI);
-#endif
-
-    if (rlst)
-    {
-        uint32_t cardSize = SD.cardSize() / (1024 * 1024);
-        Serial.print("Sd Card init succeeded, The current available capacity is ");
-        Serial.print(cardSize / 1024.0);
-        Serial.println(" GB");
-        deviceOnline |= SDCARD_ONLINE;
-        return testSDWriteAndRead();
-    }
-    else
-    {
-        Serial.println("Warning: Failed to init Sd Card");
-    }
-#endif /*HAS_SDCARD*/
-    return false;
-}
-
 void beginWiFi()
 {
 #ifdef ARDUINO_ARCH_ESP32
@@ -651,8 +421,6 @@ void printWakeupReason()
 
 void getChipInfo()
 {
-#if defined(ARDUINO_ARCH_ESP32)
-
     Serial.println("-----------------------------------");
 
     printWakeupReason();
@@ -706,19 +474,6 @@ void getChipInfo()
     Serial.println();
 
     Serial.println("-----------------------------------");
-
-#elif defined(ARDUINO_ARCH_STM32)
-    uint32_t uid[3];
-
-    uid[0] = HAL_GetUIDw0();
-    uid[1] = HAL_GetUIDw1();
-    uid[2] = HAL_GetUIDw2();
-    Serial.print("STM UID: 0X");
-    Serial.print(uid[0], HEX);
-    Serial.print(uid[1], HEX);
-    Serial.print(uid[2], HEX);
-    Serial.println();
-#endif
 }
 
 void setupBoards(bool disable_u8g2)
@@ -731,62 +486,9 @@ void setupBoards(bool disable_u8g2)
 
     getChipInfo();
 
-#if defined(ARDUINO_ARCH_ESP32)
     SPI.begin(RADIO_SCLK_PIN, RADIO_MISO_PIN, RADIO_MOSI_PIN);
-#elif defined(ARDUINO_ARCH_STM32)
-    SPI.setMISO(RADIO_MISO_PIN);
-    SPI.setMOSI(RADIO_MOSI_PIN);
-    SPI.setSCLK(RADIO_SCLK_PIN);
-    SPI.begin();
-#endif
 
-#if defined(HAS_SDCARD)
-#if defined(SD_SHARE_SPI_BUS)
-    // Share spi bus with lora , set lora cs,rst to high
-    pinMode(RADIO_CS_PIN, OUTPUT);
-    pinMode(RADIO_RST_PIN, OUTPUT);
-    digitalWrite(RADIO_CS_PIN, HIGH);
-    digitalWrite(RADIO_RST_PIN, HIGH);
-#else
-    SDCardSPI.begin(SDCARD_SCLK, SDCARD_MISO, SDCARD_MOSI);
-#endif /*SD_SHARE_SPI_BUS*/
-#endif /*HAS_SDCARD*/
-
-#ifdef I2C1_SDA
-    Wire1.begin(I2C1_SDA, I2C1_SCL);
-    Serial.println("Scan Wire1...");
-    scanDevices(&Wire1);
-#endif
-
-#ifdef HAS_GPS
-
-#ifdef GPS_EN_PIN
-    pinMode(GPS_EN_PIN, OUTPUT);
-    digitalWrite(GPS_EN_PIN, HIGH);
-#endif /*GPS_EN_PIN*/
-
-#ifdef GPS_PPS_PIN
-    pinMode(GPS_PPS_PIN, INPUT);
-#endif
-
-#if defined(ARDUINO_ARCH_ESP32)
     SerialGPS.begin(GPS_BAUD_RATE, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
-#elif defined(ARDUINO_ARCH_STM32)
-    SerialGPS.setRx(GPS_RX_PIN);
-    SerialGPS.setTx(GPS_TX_PIN);
-    SerialGPS.begin(GPS_BAUD_RATE);
-#endif // ARDUINO_ARCH_
-#endif // HAS_GPS
-
-#if OLED_RST
-    pinMode(OLED_RST, OUTPUT);
-    digitalWrite(OLED_RST, HIGH);
-    delay(20);
-    digitalWrite(OLED_RST, LOW);
-    delay(20);
-    digitalWrite(OLED_RST, HIGH);
-    delay(20);
-#endif
 
 #ifdef BOARD_LED
     /*
@@ -803,44 +505,6 @@ void setupBoards(bool disable_u8g2)
     digitalWrite(BOARD_LED, LED_ON);
 #endif
 
-#ifdef GPS_RST_PIN
-    pinMode(GPS_RST_PIN, OUTPUT);
-    digitalWrite(GPS_RST_PIN, HIGH);
-#endif
-
-#if defined(ARDUINO_ARCH_STM32)
-    SerialGPS.println("@GSR");
-    delay(300);
-    SerialGPS.println("@GSR");
-    delay(300);
-    SerialGPS.println("@GSR");
-    delay(300);
-    SerialGPS.println("@GSR");
-    delay(300);
-    SerialGPS.println("@GSR");
-    delay(300);
-#endif
-
-#ifdef RADIO_LDO_EN
-    /*
-     * 2W and BPF LoRa LDO enable , Control SX1262 , LNA
-     * 2W and BPF  Radio version must set LDO_EN to HIGH to initialize the Radio
-     * */
-    pinMode(RADIO_LDO_EN, OUTPUT);
-    digitalWrite(RADIO_LDO_EN, HIGH);
-#endif
-
-#ifdef RADIO_CTRL
-    /*
-     * 2W and BPF LoRa RX TX Control
-     * CTRL controls the LNA, not the PA.
-     * Only when RX DATA is on, set to 1 to turn on LNA
-     * When TX DATA is on, CTL is set to 0 and LNA is turned off.
-     * */
-    pinMode(RADIO_CTRL, OUTPUT);
-    digitalWrite(RADIO_CTRL, LOW);
-#endif
-
 #ifdef RADIO_DIO2_PIN
     pinMode(RADIO_DIO2_PIN, INPUT);
 #endif
@@ -854,27 +518,12 @@ void setupBoards(bool disable_u8g2)
     scanDevices(&Wire);
 #endif
 
-    beginSDCard();
-
-    if (!disable_u8g2)
-    {
-        beginDisplay();
-    }
-
     // scanWiFi();
 
     // beginWiFi();
 
-#ifdef FAN_CTRL
-    pinMode(FAN_CTRL, OUTPUT);
-#endif
-
 #ifdef HAS_GPS
 
-#if defined(T_BEAM_S3_SUPREME) || defined(T_BEAM_2W) || defined(T_BEAM_S3_BPF)
-    // T-Beam v1.2 skips L76K
-    find_gps = beginGPS();
-#endif
     uint32_t baudrate[] = {9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600, 4800};
     if (!find_gps)
     {
@@ -902,10 +551,6 @@ void setupBoards(bool disable_u8g2)
         deviceOnline |= GPS_ONLINE;
     }
 
-#ifdef T_BEAM_S3_SUPREME
-    enable_slow_clock();
-#endif
-
 #endif
     Serial.println("init done . ");
 }
@@ -920,14 +565,6 @@ void printResult(bool radio_online)
     Serial.print("PSRAM        : ");
     Serial.println((psramFound()) ? "+" : "-");
 
-    Serial.print("Display      : ");
-    Serial.println((u8g2) ? "+" : "-");
-
-#ifdef HAS_SDCARD
-    Serial.print("Sd Card      : ");
-    Serial.println((SD.cardSize() != 0) ? "+" : "-");
-#endif
-
 #ifdef HAS_PMU
     Serial.print("Power        : ");
     Serial.println((PMU) ? "+" : "-");
@@ -938,35 +575,6 @@ void printResult(bool radio_online)
     Serial.println((find_gps) ? "+" : "-");
 #endif
 
-    if (u8g2)
-    {
-
-        u8g2->clearBuffer();
-        u8g2->setFont(u8g2_font_NokiaLargeBold_tf);
-        uint16_t str_w = u8g2->getStrWidth(BOARD_VARIANT_NAME);
-        u8g2->drawStr((u8g2->getWidth() - str_w) / 2, 16, BOARD_VARIANT_NAME);
-        u8g2->drawHLine(5, 21, u8g2->getWidth() - 5);
-
-        u8g2->drawStr(0, 38, "Disp:");
-        u8g2->drawStr(45, 38, (u8g2) ? "+" : "-");
-
-#ifdef HAS_SDCARD
-        u8g2->drawStr(0, 54, "SD :");
-        u8g2->drawStr(45, 54, (SD.cardSize() != 0) ? "+" : "-");
-#endif
-
-        u8g2->drawStr(62, 38, "Radio:");
-        u8g2->drawStr(120, 38, (radio_online) ? "+" : "-");
-
-#ifdef HAS_PMU
-        u8g2->drawStr(62, 54, "Power:");
-        u8g2->drawStr(120, 54, (PMU) ? "+" : "-");
-#endif
-
-        u8g2->sendBuffer();
-
-        delay(2000);
-    }
 #endif
 }
 
@@ -1269,23 +877,6 @@ bool recoveryGPS()
 float getTempForNTC()
 {
     static float temperature = 0.0f;
-#ifdef NTC_PIN
-    static uint32_t check_temperature = 0;
-    if (millis() > check_temperature)
-    {
-        float voltage = analogReadMilliVolts(NTC_PIN) / 1000.0;
-        float resistance = SERIES_RESISTOR * ((3.3 / voltage) - 1); // Calculate the resistance of NTC
-
-        // Calculate temperature using the Steinhart-Hart equation
-        temperature = (1.0 / (log(resistance / ROOM_TEMP_RESISTANCE) / B_COEFFICIENT + 1.0 / ROOM_TEMP)) - 273.15;
-
-        // Serial.print("Temperature: ");
-        // Serial.print(temperature);
-        // Serial.println(" °C");
-
-        check_temperature = millis() + 1000;
-    }
-#endif
     return temperature;
 }
 

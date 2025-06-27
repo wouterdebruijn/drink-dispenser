@@ -8,16 +8,10 @@
 #endif
 
 #include <Arduino.h>
-#include <SPI.h>
-#include <Wire.h>
-#include <U8g2lib.h>
 #include <XPowersLib.h>
+#include <SPI.h>
 
 #include <esp_mac.h>
-
-#ifndef DISPLAY_MODEL
-#define DISPLAY_MODEL U8G2_SSD1306_128X64_NONAME_F_HW_I2C
-#endif
 
 #ifndef OLED_WIRE_PORT
 #define OLED_WIRE_PORT Wire
@@ -69,8 +63,6 @@ void setupBoards(bool disable_u8g2 = false);
 
 bool beginSDCard();
 
-bool beginDisplay();
-
 void disablePeripherals();
 
 bool beginPower();
@@ -91,10 +83,6 @@ void scanWiFi();
 
 extern XPowersLibInterface *PMU;
 extern bool pmuInterrupt;
-extern DISPLAY_MODEL *u8g2;
-
-#define U8G2_HOR_ALIGN_CENTER(t) ((u8g2->getDisplayWidth() - (u8g2->getUTF8Width(t))) / 2)
-#define U8G2_HOR_ALIGN_RIGHT(t) (u8g2->getDisplayWidth() - u8g2->getUTF8Width(t))
 #define SerialGPS Serial1
 
 float getTempForNTC();
