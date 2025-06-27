@@ -1,0 +1,3 @@
+[submodule "lib/RFID-UHF-reader"]
+	path = lib/RFID-UHF-reader
+	url = git@github.com:Xinyuan-LilyGO/RFID-UHF-reader.git
