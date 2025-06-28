@@ -1,9 +1,8 @@
 #include "RfidReader.h"
 
-RfidReader::RfidReader(HardwareSerial *serial, uint8_t enablePin, RfidStorage storage)
+RfidReader::RfidReader(HardwareSerial *serial, uint8_t enablePin, RfidStorage *storage)
     : serial(serial), rfc(serial), enablePin(enablePin), storage(storage)
 {
-    // Constructor initializes the RFID reader with the provided serial port and enable pin.
 }
 
 void RfidReader::begin()
@@ -26,14 +25,19 @@ void RfidReader::begin()
 
     // Set the serial timeout and FIFO full settings.
     Serial.println(rfc.SetRegionFrame(REGION_CODE_EUR) ? "SUCCESS" : "Fail");
-    Serial.println(rfc.SetPaPowerFrame(0x14) ? "SUCCESS" : "Fail");
-    Serial.println(rfc.SetGetLabelStart(0xFFFF) ? "SUCCESS" : "Fail");
+    Serial.println(rfc.SetPaPowerFrame(0x00) ? "SUCCESS" : "Fail");
+}
+
+void RfidReader::parseSerial()
+{
+    while (serial->available())
+        rfc.encode(serial->read());
 }
 
 void RfidReader::loop()
 {
-    while (serial->available())
-        rfc.encode(serial->read());
+    // Multiread for 16 tags.
+    Serial.println(rfc.SetGetLabelStart(0x0010) ? "SUCCESS" : "Fail");
 
     if (rfc.inventory.isValid() && rfc.inventory.isUpdated())
     {
@@ -42,32 +46,39 @@ void RfidReader::loop()
     }
     else
     {
-        uint8_t errorCode = rfc.error.ErrorCode();
-
-        if (errorCode != 0x15)
-        {
-            Serial.print("RFID Error: ");
-            Serial.println(errorCode, HEX);
-            return;
-        }
+        Serial.printf("Error Code: %X\n", rfc.error.ErrorCode());
     }
 }
 
 void RfidReader::handleTag(const Inventory_t &label)
 {
-    String tagId = String((char *)label.epc, 12);
-    Serial.print("RFID Tag ID: ");
-    Serial.println(tagId);
+    // Last 2 bytes of the EPC are used as the tag ID.
+    uint16_t value = 0;
 
-// Increment the tag count by the given ML amount.]
+    value = (label.epc[10] << 8) | label.epc[11];
 
-// TODO: Implement logic to determine the ML amount based on the tag ID.
-#define ML_AMOUNT 20 // Example amount, replace with actual logic
+    if (value == lastTagId)
+    {
+        // TODO add reset
+        return;
+    }
 
-    uint16_t count = storage.incrementTagCount(tagId, ML_AMOUNT);
+    uint16_t count = storage->incrementTagCount(value, 20); // TODO change to variable from Lora
 
-    Serial.print("Tag Count for ");
-    Serial.print(tagId);
-    Serial.print(": ");
-    Serial.println(count);
+    lastTagCount = count;
+    lastTagId = value;
+}
+
+String RfidReader::displayLine()
+{
+    if (lastTagId == 0)
+    {
+        return "Waiting for tag...";
+    }
+
+    String line = "Tag: ";
+    line += String(lastTagId, HEX);
+    line += " Count: ";
+    line += String(lastTagCount);
+    return line;
 }

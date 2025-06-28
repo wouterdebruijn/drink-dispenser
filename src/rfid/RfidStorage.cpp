@@ -3,50 +3,69 @@
 #include <Arduino.h>
 #include <WString.h>
 
-uint16_t RfidStorage::incrementTagCount(const String &tagId, uint16_t increment)
+void RfidStorage::debugPrint()
+{
+    Serial.println("RFID Tag Ids:");
+    for (int i = 0; i < RFID_MAX_TAGS; i++)
+    {
+        Serial.printf("Tag %d: ID: %04X, Count: %d\n", i, tagIdArray[i], tagCountArray[i]);
+    }
+}
+
+uint16_t RfidStorage::incrementTagCount(uint16_t tagId, uint16_t increment)
 {
     for (int i = 0; i < RFID_MAX_TAGS; i++)
     {
         if (this->tagIdArray[i] == tagId)
         {
-            this->changedTagIdMask[i] += increment; // Increment the count for the existing tag
-            return changedTagIdMask[i];
+            this->tagCountArray[i] += increment; // Increment the count for the existing tag
+            this->changedTagIdMask[i] = true;    // Mark this tag as changed
+
+            Serial.printf("Tag ID %04X incremented by %d, new count: %d\n", tagId, increment, this->tagCountArray[i]);
+
+            return this->tagCountArray[i];
         }
     }
 
     // If the tag is not found, add it to the first empty slot
     for (int i = 0; i < RFID_MAX_TAGS; i++)
     {
-        if (this->tagIdArray[i].isEmpty())
+        if (this->tagIdArray[i] == 0)
         {
             tagIdArray[i] = tagId;
-            this->changedTagIdMask[i] = increment; // Set the count for the new tag
-            return changedTagIdMask[i];
+            this->tagCountArray[i] = increment; // Set the count for the new tag
+            this->changedTagIdMask[i] = true;   // Mark this tag as changed
+            return this->tagCountArray[i];
         }
     }
+    Serial.println("No space available in tag storage.");
     return 0; // Return 0 if no space available
 }
 
-String RfidStorage::dumpTagStorage()
+char *RfidStorage::dumpTagStorage()
 {
-    String json = "[";
-    bool first = true;
+    static char buffer[RFID_MAX_TAGS * 4] = {0}; // Buffer to hold the output
+    int bufferIndex = 0;
 
     for (int i = 0; i < RFID_MAX_TAGS; i++)
     {
-        if (!this->changedTagIdMask[i])
+        if (!this->changedTagIdMask[i]) // Only dump changed tags
         {
-            if (!first)
-            {
-                json += ",";
-            }
-            json += "{\"id\":\"" + this->tagIdArray[i] + "\",\"count\":" + String(this->tagCountArray[i]) + "}";
-            first = false;
+            continue; // Skip unchanged tags
         }
+
+        uint16_t tagId = this->tagIdArray[i];
+        uint16_t count = this->tagCountArray[i];
+
+        buffer[bufferIndex++] = (tagId >> 8) & 0xFF; // Store high byte
+        buffer[bufferIndex++] = tagId & 0xFF;        // Store low byte
+        buffer[bufferIndex++] = (count >> 8) & 0xFF; // Store high byte of count
+        buffer[bufferIndex++] = count & 0xFF;        // Store low byte of count
     }
 
-    json += "]";
-    return json;
+    // End of buffer
+    buffer[bufferIndex] = '\0'; // Null-terminate the string
+    return buffer;              // Return the buffer containing the tag storage dump
 }
 
 void RfidStorage::clearChangedTags()
