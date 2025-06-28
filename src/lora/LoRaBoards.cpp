@@ -631,7 +631,7 @@ void scanDevices(TwoWire *w)
                 deviceOnline |= POWERMANAGE_ONLINE;
                 break;
             case 0x3C:
-                Serial.println("\tFind SSD1306/SH1106 dispaly!");
+                Serial.println("\tFind SSD1306/SH1106 display!");
                 deviceOnline |= DISPLAY_ONLINE;
                 break;
             case 0x51:

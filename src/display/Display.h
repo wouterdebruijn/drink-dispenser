@@ -22,6 +22,7 @@ public:
     size_t print(unsigned long n, int base = DEC) { return u8g2.print(n, base); }
     size_t print(float n, int decimalPlaces = 2) { return u8g2.print(n, decimalPlaces); }
     size_t print(double n, int decimalPlaces = 2) { return u8g2.print(n, decimalPlaces); }
+    size_t print(uint64_t n, int base = DEC) { return u8g2.print(n, base); }
     void println(const char *str) { u8g2.println(str); }
     void setCursor(int x, int y) { u8g2.setCursor(x, y); }
     void setFont(const uint8_t *font) { u8g2.setFont(font); }

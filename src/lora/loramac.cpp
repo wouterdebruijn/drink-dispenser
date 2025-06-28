@@ -4,26 +4,18 @@
  */
 
 #include <Arduino.h>
-#include <lmic.h>
+#include <arduino_lmic.h>
 #include <hal/hal.h>
+#include "loramac.h"
 #include "LoRaBoards.h"
 
 #include "secrets.h"
-
-// // Chose LSB mode on the console and then copy it here.
-// static const u1_t PROGMEM APPEUI[8] = { 0x31, 0x7A, 0x02, 0xD0, 0x7E, 0xD5, 0xB3, 0x70 };
-// // LSB mode
-// static const u1_t PROGMEM DEVEUI[8] = { 0x2D, 0x13, 0xB2, 0x6C, 0xBE, 0x35, 0xE7, 0x00 };
-// // MSB mode
-// static const u1_t PROGMEM APPKEY[16] = {0x75, 0x7F, 0xE4, 0xB5, 0xD0, 0xBB, 0x39, 0x03, 0x9D, 0x24, 0x55, 0x35, 0xD8, 0x42, 0xCE, 0xD7};
 
 static const u1_t PROGMEM APPEUI[8] = {0x32, 0x0D, 0x01, 0x00, 0x00, 0xAC, 0x59, 0x00};
 // LSB mode
 static const u1_t PROGMEM DEVEUI[8] = {0x61, 0x34, 0x1B, 0x00, 0x00, 0xAC, 0x59, 0x00};
 // MSB mode
 static const u1_t PROGMEM APPKEY[16] = LORAWAN_APPKEY;
-
-static uint8_t mydata[] = "Hello, new.io!";
 
 // Pin mapping
 const lmic_pinmap lmic_pins = {
@@ -32,11 +24,9 @@ const lmic_pinmap lmic_pins = {
     .rst = RADIO_RST_PIN,
     .dio = {RADIO_DIO0_PIN, RADIO_DIO1_PIN, RADIO_DIO2_PIN}};
 
-static osjob_t sendjob;
 static int spreadFactor = DR_SF7;
 static int joinStatus = EV_JOINING;
-static const unsigned TX_INTERVAL = 1200;
-static String lora_msg = "";
+static const unsigned TX_INTERVAL = 600; // seconds
 
 void os_getArtEui(u1_t *buf)
 {
@@ -62,11 +52,17 @@ void do_send(osjob_t *j)
     }
     else
     {
-        // Prepare upstream data transmission at the next possible time.
+        String lora_msg = "";
+
+        // Convert the message to a char array
+        uint8_t mydata[256];
+        lora_msg.toCharArray((char *)mydata, sizeof(mydata));
+
         LMIC_setTxData2(1, mydata, sizeof(mydata) - 1, 0);
         Serial.println(F("Packet queued"));
+        Serial.print(F("Data: "));
+        Serial.println((char *)mydata);
     }
-    // Next TX is scheduled after TX_COMPLETE event.
 }
 
 void onEvent(ev_t ev)
@@ -92,12 +88,6 @@ void onEvent(ev_t ev)
         break;
     case EV_JOINED:
         Serial.println(F("EV_JOINED"));
-        os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(10), do_send);
-
-        // Disable link check validation (automatically enabled
-        // during join, but because slow data rates change max TX
-        // size, we don't use it in this example.
-        LMIC_setLinkCheckMode(0);
         break;
     /*
     || This event is defined but not used in the code. No
@@ -124,7 +114,7 @@ void onEvent(ev_t ev)
             Serial.println(F(" bytes of payload"));
         }
         // Schedule next transmission
-        os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
+        // os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
         break;
     case EV_LOST_TSYNC:
         Serial.println(F("EV_LOST_TSYNC"));
