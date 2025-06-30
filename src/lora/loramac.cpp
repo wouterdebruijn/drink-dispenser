@@ -3,10 +3,9 @@
  * LMIC library only support SX1276 Radio
  */
 
-#include <Arduino.h>
+#include "loramac.h"
 #include <arduino_lmic.h>
 #include <hal/hal.h>
-#include "loramac.h"
 #include "LoRaBoards.h"
 
 #include "secrets.h"
@@ -26,7 +25,8 @@ const lmic_pinmap lmic_pins = {
 
 static int spreadFactor = DR_SF7;
 static int joinStatus = EV_JOINING;
-static const unsigned TX_INTERVAL = 600; // seconds
+static const unsigned TX_INTERVAL = 60; // seconds
+RfidStorage *loraWanRfidStorage = nullptr;
 
 void os_getArtEui(u1_t *buf)
 {
@@ -52,16 +52,24 @@ void do_send(osjob_t *j)
     }
     else
     {
-        String lora_msg = "";
+        static uint8_t buffer[RFID_MAX_TAGS * 4] = {0}; // Buffer to hold the output
 
         // Convert the message to a char array
-        uint8_t mydata[256];
-        lora_msg.toCharArray((char *)mydata, sizeof(mydata));
+        uint8_t length = loraWanRfidStorage->dumpTagStorage(buffer);
 
-        LMIC_setTxData2(1, mydata, sizeof(mydata) - 1, 0);
+        Serial.print("Payload: ");
+
+        if (length == 0)
+        {
+            Serial.println(F("No data to send"));
+
+            // Reschedule because we are not sending anything.
+            os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
+            return;
+        }
+
+        LMIC_setTxData2(1, buffer, length, 0);
         Serial.println(F("Packet queued"));
-        Serial.print(F("Data: "));
-        Serial.println((char *)mydata);
     }
 }
 
@@ -88,6 +96,10 @@ void onEvent(ev_t ev)
         break;
     case EV_JOINED:
         Serial.println(F("EV_JOINED"));
+        joinStatus = EV_JOINED;
+
+        os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
+
         break;
     /*
     || This event is defined but not used in the code. No
@@ -114,7 +126,7 @@ void onEvent(ev_t ev)
             Serial.println(F(" bytes of payload"));
         }
         // Schedule next transmission
-        // os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
+        os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
         break;
     case EV_LOST_TSYNC:
         Serial.println(F("EV_LOST_TSYNC"));
@@ -169,8 +181,10 @@ void onEvent(ev_t ev)
 //   return val;
 // }
 
-void setupLMIC(void)
+void setupLMIC(RfidStorage *storage)
 {
+    loraWanRfidStorage = storage;
+
     // LMIC init
     os_init();
 

@@ -11,7 +11,7 @@ class RfidStorage
 public:
     RfidStorage() = default;
     uint16_t incrementTagCount(uint16_t tagId, uint16_t increment);
-    char *dumpTagStorage();
+    uint8_t dumpTagStorage(uint8_t *buffer);
     void clearChangedTags();
     void debugPrint();
 

@@ -20,19 +20,32 @@ RfidStorage rfidStorage;
 HardwareSerial SerialRF(2);
 RfidReader rfidReader(&SerialRF, RFID_ENABLE_PIN, &rfidStorage);
 
-// void rfidLoop()
-// {
-//   rfidReader.loop();
-// }
+void rfidLoop()
+{
+  rfidReader.loop();
+}
 
-// Task rfidTask(2000 * TASK_MILLISECOND, TASK_FOREVER, &rfidLoop, &ts, true);
+void displayLoop()
+{
+  display.clear();
+  display.setCursor(0, 10);
+  display.print("Battery: ");
+  display.print(PMU->getBatteryPercent());
+  display.print("%");
+  display.setCursor(0, 20);
+  display.print(rfidReader.displayLine());
+  display.sendBuffer();
+}
+
+Task displayTask(1000 * TASK_MILLISECOND, TASK_FOREVER, &displayLoop, &ts, true);
+Task rfidTask(100 * TASK_MILLISECOND, TASK_FOREVER, &rfidLoop, &ts, true);
 
 void setup()
 {
   setupBoards();
   // When the power is turned on, a delay is required.
   delay(1500);
-  // setupLMIC();
+  setupLMIC(&rfidStorage);
 
   rfidReader.begin();
   display.begin();
@@ -45,20 +58,7 @@ bool rfidScheduled = false;
 
 void loop()
 {
-  // loopLMIC();
+  loopLMIC();
   rfidReader.parseSerial();
-  rfidReader.loop();
-
-  delay(200);
-
-  display.clear();
-  display.setCursor(0, 10);
-  display.print("Battery: ");
-  display.print(PMU->getBatteryPercent());
-  display.print("%");
-  display.setCursor(0, 20);
-  display.print(rfidReader.displayLine());
-  display.sendBuffer();
-
-  // ts.execute();
+  ts.execute();
 }

@@ -42,9 +42,8 @@ uint16_t RfidStorage::incrementTagCount(uint16_t tagId, uint16_t increment)
     return 0; // Return 0 if no space available
 }
 
-char *RfidStorage::dumpTagStorage()
+uint8_t RfidStorage::dumpTagStorage(uint8_t *buffer)
 {
-    static char buffer[RFID_MAX_TAGS * 4] = {0}; // Buffer to hold the output
     int bufferIndex = 0;
 
     for (int i = 0; i < RFID_MAX_TAGS; i++)
@@ -64,8 +63,7 @@ char *RfidStorage::dumpTagStorage()
     }
 
     // End of buffer
-    buffer[bufferIndex] = '\0'; // Null-terminate the string
-    return buffer;              // Return the buffer containing the tag storage dump
+    return bufferIndex; // Return the number of bytes written to the buffer
 }
 
 void RfidStorage::clearChangedTags()

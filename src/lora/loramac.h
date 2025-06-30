@@ -2,8 +2,9 @@
 
 #include <Arduino.h>
 #include <lmic.h>
+#include "rfid/RfidStorage.h"
 
-void setupLMIC(void);
+void setupLMIC(RfidStorage *storage);
 void loopLMIC(void);
 
 static osjob_t sendjob;

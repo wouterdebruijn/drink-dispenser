@@ -37,7 +37,7 @@ void RfidReader::parseSerial()
 void RfidReader::loop()
 {
     // Multiread for 16 tags.
-    Serial.println(rfc.SetGetLabelStart(0x0010) ? "SUCCESS" : "Fail");
+    rfc.SetGetLabelStart(0x0004);
 
     if (rfc.inventory.isValid() && rfc.inventory.isUpdated())
     {
@@ -46,7 +46,14 @@ void RfidReader::loop()
     }
     else
     {
-        Serial.printf("Error Code: %X\n", rfc.error.ErrorCode());
+        uint8_t errorCode = rfc.error.ErrorCode();
+
+        if (errorCode == 0x15)
+        {
+            // Generic error, no tag found.
+            return;
+        }
+        Serial.printf("Error Code: %X\n", errorCode);
     }
 }
 
