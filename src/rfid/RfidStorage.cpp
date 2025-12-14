@@ -19,7 +19,6 @@ uint16_t RfidStorage::incrementTagCount(uint16_t tagId, uint16_t increment)
         if (this->tagIdArray[i] == tagId)
         {
             this->tagCountArray[i] += increment; // Increment the count for the existing tag
-            this->changedTagIdMask[i] = true;    // Mark this tag as changed
 
             Serial.printf("Tag ID %04X incremented by %d, new count: %d\n", tagId, increment, this->tagCountArray[i]);
 
@@ -34,7 +33,7 @@ uint16_t RfidStorage::incrementTagCount(uint16_t tagId, uint16_t increment)
         {
             tagIdArray[i] = tagId;
             this->tagCountArray[i] = increment; // Set the count for the new tag
-            this->changedTagIdMask[i] = true;   // Mark this tag as changed
+            this->tagSendCountArray[i] = 0;     // Initialize the sent count for the new tag
             return this->tagCountArray[i];
         }
     }
@@ -48,18 +47,21 @@ uint8_t RfidStorage::dumpTagStorage(uint8_t *buffer)
 
     for (int i = 0; i < RFID_MAX_TAGS; i++)
     {
-        if (!this->changedTagIdMask[i]) // Only dump changed tags
+        if (this->tagSendCountArray[i] == this->tagCountArray[i]) // Only dump changed tags
         {
             continue; // Skip unchanged tags
         }
 
         uint16_t tagId = this->tagIdArray[i];
-        uint16_t count = this->tagCountArray[i];
+        uint16_t difference = this->tagCountArray[i] - this->tagSendCountArray[i];
 
-        buffer[bufferIndex++] = (tagId >> 8) & 0xFF; // Store high byte
-        buffer[bufferIndex++] = tagId & 0xFF;        // Store low byte
-        buffer[bufferIndex++] = (count >> 8) & 0xFF; // Store high byte of count
-        buffer[bufferIndex++] = count & 0xFF;        // Store low byte of count
+        this->tagIsInPayload[i] = true;
+
+        // Send as two uint16_t values using big-endian format
+        buffer[bufferIndex++] = (tagId >> 8) & 0xFF;      // Store high byte
+        buffer[bufferIndex++] = tagId & 0xFF;             // Store low byte
+        buffer[bufferIndex++] = (difference >> 8) & 0xFF; // Store high byte of count
+        buffer[bufferIndex++] = difference & 0xFF;        // Store low byte of count
     }
 
     // End of buffer
@@ -70,6 +72,10 @@ void RfidStorage::clearChangedTags()
 {
     for (int i = 0; i < RFID_MAX_TAGS; i++)
     {
-        this->changedTagIdMask[i] = false; // Reset the changed mask
+        if (this->tagIsInPayload[i])
+        {
+            this->tagIsInPayload[i] = false;
+            this->tagSendCountArray[i] = this->tagCountArray[i];
+        }
     }
 }

@@ -57,9 +57,6 @@ void do_send(osjob_t *j)
         // Convert the message to a char array
         uint8_t length = loraWanRfidStorage->dumpTagStorage(buffer);
 
-        // Clear tags now, as we don't want to miss any changes while sending, has the drawback that if sending fails, we lose data
-        loraWanRfidStorage->clearChangedTags();
-
         Serial.print("Payload: ");
 
         if (length == 0)
@@ -120,6 +117,10 @@ void onEvent(ev_t ev)
         break;
     case EV_TXCOMPLETE:
         Serial.println(F("EV_TXCOMPLETE (includes waiting for RX windows)"));
+
+        // Post TX processing ack data sending for RFID storage
+        loraWanRfidStorage->clearChangedTags();
+
         if (LMIC.txrxFlags & TXRX_ACK)
             Serial.println(F("Received ack"));
         if (LMIC.dataLen)
