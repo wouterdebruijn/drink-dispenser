@@ -1,7 +1,7 @@
 #include "RfidReader.h"
 
-RfidReader::RfidReader(HardwareSerial *serial, uint8_t enablePin, RfidStorage *storage)
-    : serial(serial), rfc(serial), enablePin(enablePin), storage(storage)
+RfidReader::RfidReader(HardwareSerial *serial, uint8_t enablePin, RfidStorage *storage, PumpOnEnable pumpEnableCallback)
+    : serial(serial), rfc(serial), enablePin(enablePin), storage(storage), pumpEnable(pumpEnableCallback)
 {
 }
 
@@ -51,6 +51,18 @@ void RfidReader::loop()
         if (errorCode == 0x15)
         {
             // Generic error, no tag found.
+
+            if (lockout)
+            {
+                noTagCount++;
+                if (noTagCount >= NO_TAG_LOCKOUT_THRESHOLD)
+                {
+                    // After NO_TAG_LOCKOUT_THRESHOLD consecutive no-tag reads, disable lockout.
+                    lockout = false;
+                    noTagCount = 0;
+                }
+            }
+
             return;
         }
         Serial.printf("Error Code: %X\n", errorCode);
@@ -63,17 +75,18 @@ void RfidReader::handleTag(const Inventory_t &label)
     uint16_t value = 0;
 
     value = (label.epc[10] << 8) | label.epc[11];
-
-    if (value == lastTagId)
+    if (lockout)
     {
-        // TODO add reset
         return;
     }
 
     uint16_t count = storage->incrementTagCount(value, 20); // TODO change to variable from Lora
 
-    lastTagCount = count;
+    pumpEnable();
+
+    lockout = true;
     lastTagId = value;
+    lastTagCount = count;
 }
 
 String RfidReader::displayLine()
@@ -88,4 +101,9 @@ String RfidReader::displayLine()
     line += " Count: ";
     line += String(lastTagCount);
     return line;
+}
+
+void RfidReader::disableLockout()
+{
+    lockout = false;
 }

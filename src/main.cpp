@@ -1,3 +1,11 @@
+#define _TASK_WDT_IDS           // To enable task unique IDs
+#define _TASK_SLEEP_ON_IDLE_RUN // Compile with support for entering IDLE SLEEP state for 1 ms if not tasks are scheduled to run
+#define _TASK_LTS_POINTER       // Compile with support for Local Task Storage pointer
+#define _TASK_SELF_DESTRUCT     // Enable tasks to "self-destruct" after disable
+
+#define RFID_ENABLE_PIN 14
+#define PUMP_PIN 21
+
 #include <Arduino.h>
 
 #include "lora/loramac.h"
@@ -6,15 +14,38 @@
 #include "rfid/RfidReader.h"
 #include "rfid/RfidStorage.h"
 
+#include "peripherals/Pump.h"
+
 #include <TaskScheduler.h>
+
+int freeMemory() { return ESP.getFreeHeap(); }
 
 Scheduler ts;
 
 RfidStorage rfidStorage;
 
-#define RFID_ENABLE_PIN 14
+void enablePumpForDuration();
+
 HardwareSerial SerialRF(2);
-RfidReader rfidReader(&SerialRF, RFID_ENABLE_PIN, &rfidStorage);
+RfidReader rfidReader(&SerialRF, RFID_ENABLE_PIN, &rfidStorage, &enablePumpForDuration);
+Pump pump(PUMP_PIN);
+
+void pumpTimerCallback();
+
+Task pumpOffTask(2000 * TASK_MILLISECOND, TASK_ONCE, &pumpTimerCallback, &ts, false);
+
+void pumpTimerCallback()
+{
+  Serial.println("Pump disabled");
+  pump.disablePump();
+}
+
+void enablePumpForDuration()
+{
+  Serial.println("Pump enabled");
+  pump.enablePump();
+  pumpOffTask.restartDelayed();
+}
 
 void rfidLoop()
 {
@@ -37,6 +68,7 @@ void setup()
   setupLMIC(&rfidStorage);
 
   rfidReader.begin();
+  pump.begin();
 
   delay(1000);
 }

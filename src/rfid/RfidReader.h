@@ -3,14 +3,19 @@
 #include <RF_Commands.h>
 #include "RfidStorage.h"
 
+#define NO_TAG_LOCKOUT_THRESHOLD 32
+
+typedef void (*PumpOnEnable)();
+
 class RfidReader
 {
 public:
-    RfidReader(HardwareSerial *serial, uint8_t enablePin, RfidStorage *storage);
+    RfidReader(HardwareSerial *serial, uint8_t enablePin, RfidStorage *storage, PumpOnEnable pumpEnableCallback);
     void begin();
     void loop();
     void parseSerial();
     String displayLine();
+    void disableLockout();
 
 private:
     uint16_t lastTagId = 0;    // Store the last tag ID to avoid duplicates
@@ -19,5 +24,8 @@ private:
     RFC_Class rfc;
     RfidStorage *storage;
     uint8_t enablePin;
+    PumpOnEnable pumpEnable;
+    bool lockout = false;
+    uint8_t noTagCount = 0;
     void handleTag(const Inventory_t &label);
 };
