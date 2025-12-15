@@ -34,13 +34,27 @@ Pump pump(PUMP_PIN);
 Display display;
 
 void pumpTimerCallback();
+void pumpDisableCallback();
+void displayLoop();
 
-Task pumpOffTask(2000 * TASK_MILLISECOND, TASK_ONCE, &pumpTimerCallback, &ts, false);
+// 20 steps for checks and animation
+Task pumpOffTask(100 * TASK_MILLISECOND, 20, &pumpTimerCallback, &ts, false, NULL, &pumpDisableCallback);
 
-void pumpTimerCallback()
+uint8_t pump_dispense_counter = 0;
+
+void pumpDisableCallback()
 {
   Serial.println("Pump disabled");
   pump.disablePump();
+  pump_dispense_counter = 0;
+}
+
+void pumpTimerCallback()
+{
+  Serial.println("Pump timer tick");
+  pump_dispense_counter++;
+
+  displayLoop();
 }
 
 void enablePumpForDuration()
@@ -60,16 +74,46 @@ void displayLoop()
   Serial.println(rfidReader.displayLine());
   loopPMU(NULL);
 
-  display.clear();
+  display.clearBuffer();
+  display.setFontMode(1);
+  display.setBitmapMode(1);
+  display.setFont(u8g2_font_6x12_tr);
+  display.drawStr(19, 58, "Shot Machine");
 
-  // Shot machine display
-  display.setFont(u8g2_font_ncenB08_tr);
-  display.setCursor(0, 10);
-  display.print("Shot Machine");
-  display.setCursor(0, 30);
-  display.print("Last Tag:");
-  display.setCursor(0, 50);
-  display.print(rfidReader.displayLine());
+  display.setFont(u8g2_font_5x8_tr);
+  display.drawStr(95, 58, "v4");
+
+  uint8_t batteryLevel = PMU->getBatteryPercent();
+
+  display.setFont(u8g2_font_5x7_tr);
+  display.drawStr(1, 7, String(batteryLevel).c_str());
+
+  if (pump_dispense_counter > 0)
+  {
+    switch (pump_dispense_counter / 5)
+    {
+    case 0:
+      display.drawXBM(46, 7, 36, 39, shot_glass_frame_1);
+      break;
+    case 1:
+      display.drawXBM(46, 7, 36, 39, shot_glass_frame_2);
+      break;
+    case 2:
+      display.drawXBM(46, 7, 36, 39, shot_glass_frame_3);
+      break;
+    case 3:
+      display.drawXBM(46, 7, 36, 39, shot_glass_frame_4);
+      break;
+    default:
+      display.drawXBM(46, 7, 36, 39, shot_glass_frame_0);
+      break;
+    }
+  }
+  else
+  {
+    display.drawXBM(46, 7, 36, 39, shot_glass_frame_0);
+  }
+
   display.sendBuffer();
 }
 
