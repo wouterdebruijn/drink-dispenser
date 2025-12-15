@@ -26,24 +26,17 @@ void Display::clear()
 
 void Display::startupText()
 {
-    // Startup text logo "Drink Dispenser" with version, including some simple art
     u8g2.clearBuffer();
-    u8g2.setFont(u8g2_font_ncenB08_tr);
-    u8g2.setCursor(0, 10);
-    u8g2.print("Drink Dispenser");
-    u8g2.setCursor(0, 20);
-    u8g2.print("Version 1.0");
+    u8g2.setFontMode(1);
+    u8g2.setBitmapMode(1);
+    u8g2.setFont(u8g2_font_6x12_tr);
 
-    // Line art drinking glass
-    u8g2.setCursor(0, 30);
-    u8g2.print("  .-\"\"\"\"\"-.");
-    u8g2.setCursor(0, 40);
-    u8g2.print(" /          \\");
-    u8g2.setCursor(0, 50);
-    u8g2.print("|  Drink    |");
-    u8g2.setCursor(0, 60);
-    u8g2.print(" \\        /");
-    u8g2.setCursor(0, 70);
-    u8g2.print("  '-......-'");
-    u8g2.sendBuffer(); // Send the buffer to the display
+    u8g2.drawStr(19, 58, "Shot Machine");
+
+    u8g2.setFont(u8g2_font_5x8_tr);
+    u8g2.drawStr(95, 58, "v4");
+
+    u8g2.drawXBM(46, 7, 36, 39, shot_glass_frame_4);
+
+    u8g2.sendBuffer();
 }
