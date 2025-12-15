@@ -38,6 +38,10 @@ public:
     void setFont(const uint8_t *font) { u8g2.setFont(font); }
     void clearBuffer() { u8g2.clearBuffer(); }
     void sendBuffer() { u8g2.sendBuffer(); }
+    void drawStr(int x, int y, const char *str) { u8g2.drawStr(x, y, str); }
+    void drawXBM(int x, int y, int w, int h, const uint8_t *bitmap) { u8g2.drawXBM(x, y, w, h, bitmap); }
+    void setFontMode(uint8_t mode) { u8g2.setFontMode(mode); }
+    void setBitmapMode(uint8_t mode) { u8g2.setBitmapMode(mode); }
 
 private:
     U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2 = U8G2_SH1106_128X64_NONAME_F_HW_I2C(U8G2_R0, U8X8_PIN_NONE);
