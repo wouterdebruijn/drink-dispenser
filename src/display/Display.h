@@ -44,6 +44,7 @@ public:
     void drawXBM(int x, int y, int w, int h, const uint8_t *bitmap) { u8g2.drawXBM(x, y, w, h, bitmap); }
     void setFontMode(uint8_t mode) { u8g2.setFontMode(mode); }
     void setBitmapMode(uint8_t mode) { u8g2.setBitmapMode(mode); }
+    void drawLine(int x0, int y0, int x1, int y1) { u8g2.drawLine(x0, y0, x1, y1); }
 
 private:
     U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2 = U8G2_SH1106_128X64_NONAME_F_HW_I2C(U8G2_R0, U8X8_PIN_NONE);
