@@ -36,36 +36,63 @@ void RfidReader::parseSerial()
 
 void RfidReader::loop()
 {
-    // Multiread for 16 tags.
-    rfc.SetGetLabelStart(0x0004);
-
-    if (rfc.inventory.isValid() && rfc.inventory.isUpdated())
+    if (isReading == 0)
     {
-        Inventory_t label = rfc.inventory.GetLabel();
-        this->handleTag(label);
+        rfc.SetGetLabelOnce();
+        isReading = 1;
+
+        return;
     }
     else
     {
+        isReading++;
+    }
+
+    if (!rfc.error.isValid() && rfc.inventory.isValid())
+    {
+        isReading = 0;
+
+        Inventory_t label = rfc.inventory.GetLabel();
+        this->handleTag(label);
+
+#ifdef DEBUG_RFID
+        Serial.print("EPC: ");
+        for (int i = 0; i < 12; i++)
+        {
+            Serial.printf("%02X", label.epc[i]);
+        }
+        Serial.printf(" | RSSI: %d | PC: %04X | CRC: %04X\n", label.RSSI, label.PC, label.CRC);
+#endif
+    }
+    else if (rfc.error.isValid())
+    {
+        isReading = 0;
+
         uint8_t errorCode = rfc.error.ErrorCode();
 
         if (errorCode == 0x15)
         {
-            // Generic error, no tag found.
-
-            if (lockout)
+#ifdef DEBUG_RFID
+            Serial.println("No tag found.");
+#endif
+            if (lastTagId != 0)
             {
                 noTagCount++;
                 if (noTagCount >= NO_TAG_LOCKOUT_THRESHOLD)
                 {
                     // After NO_TAG_LOCKOUT_THRESHOLD consecutive no-tag reads, disable lockout.
-                    lockout = false;
+                    lastTagId = 0;
                     noTagCount = 0;
                 }
             }
-
             return;
         }
         Serial.printf("Error Code: %X\n", errorCode);
+    }
+    else if (isReading > 10)
+    {
+        isReading = 0;
+        Serial.println("Timeout waiting for inventory data.");
     }
 }
 
@@ -75,8 +102,11 @@ void RfidReader::handleTag(const Inventory_t &label)
     uint16_t value = 0;
 
     value = (label.epc[10] << 8) | label.epc[11];
-    if (lockout)
+    if (lastTagId == value)
     {
+#ifdef DEBUG_RFID
+        Serial.println("Duplicate tag read; ignoring.");
+#endif
         return;
     }
 
@@ -84,7 +114,6 @@ void RfidReader::handleTag(const Inventory_t &label)
 
     pumpEnable();
 
-    lockout = true;
     lastTagId = value;
     lastTagCount = count;
 }
@@ -105,5 +134,5 @@ String RfidReader::displayLine()
 
 void RfidReader::disableLockout()
 {
-    lockout = false;
+    lastTagId = 0;
 }

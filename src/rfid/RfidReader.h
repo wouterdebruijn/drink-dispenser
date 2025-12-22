@@ -3,7 +3,8 @@
 #include <RF_Commands.h>
 #include "RfidStorage.h"
 
-#define NO_TAG_LOCKOUT_THRESHOLD 32
+#define NO_TAG_LOCKOUT_THRESHOLD 2
+#define DEBUG_RFID
 
 typedef void (*PumpOnEnable)();
 
@@ -25,7 +26,7 @@ private:
     RfidStorage *storage;
     uint8_t enablePin;
     PumpOnEnable pumpEnable;
-    bool lockout = false;
     uint8_t noTagCount = 0;
+    uint8_t isReading = 0;
     void handleTag(const Inventory_t &label);
 };

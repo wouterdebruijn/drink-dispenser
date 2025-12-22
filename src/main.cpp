@@ -51,9 +51,7 @@ void pumpDisableCallback()
 
 void pumpTimerCallback()
 {
-  Serial.println("Pump timer tick");
   pump_dispense_counter++;
-
   displayLoop();
 }
 
@@ -71,7 +69,6 @@ void rfidLoop()
 
 void displayLoop()
 {
-  Serial.println(rfidReader.displayLine());
   loopPMU(NULL);
 
   display.clearBuffer();
@@ -125,8 +122,7 @@ void displayLoop()
   display.sendBuffer();
 }
 
-Task displayTask(1000 * TASK_MILLISECOND, TASK_FOREVER, &displayLoop, &ts, true);
-Task rfidTask(100 * TASK_MILLISECOND, TASK_FOREVER, &rfidLoop, &ts, true);
+Task rfidTask(500 * TASK_MILLISECOND, TASK_FOREVER, &rfidLoop, &ts, true);
 
 void setup()
 {
@@ -141,6 +137,8 @@ void setup()
   display.startupText();
 
   delay(1000);
+
+  displayLoop();
 }
 
 bool rfidScheduled = false;
