@@ -488,7 +488,7 @@ void setupBoards(bool disable_u8g2)
 
     SPI.begin(RADIO_SCLK_PIN, RADIO_MISO_PIN, RADIO_MOSI_PIN);
 
-    SerialGPS.begin(GPS_BAUD_RATE, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+    // SerialGPS.begin(GPS_BAUD_RATE, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
 
 #ifdef BOARD_LED
     /*
@@ -522,36 +522,36 @@ void setupBoards(bool disable_u8g2)
 
     // beginWiFi();
 
-#ifdef HAS_GPS
+    // #ifdef HAS_GPS
 
-    uint32_t baudrate[] = {9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600, 4800};
-    if (!find_gps)
-    {
-        // Restore factory settings
-        for (int i = 0; i < sizeof(baudrate) / sizeof(baudrate[0]); ++i)
-        {
-            Serial.printf("Update baudrate : %u\n", baudrate[i]);
-            SerialGPS.updateBaudRate(baudrate[i]);
-            if (recoveryGPS())
-            {
-                Serial.println("UBlox GNSS init succeeded, using UBlox GNSS Module\n");
-                gps_model = "UBlox";
-                find_gps = true;
-                break;
-            }
-        }
-    }
-    else
-    {
-        gps_model = "L76K";
-    }
+    //     uint32_t baudrate[] = {9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600, 4800};
+    //     if (!find_gps)
+    //     {
+    //         // Restore factory settings
+    //         for (int i = 0; i < sizeof(baudrate) / sizeof(baudrate[0]); ++i)
+    //         {
+    //             Serial.printf("Update baudrate : %u\n", baudrate[i]);
+    //             SerialGPS.updateBaudRate(baudrate[i]);
+    //             if (recoveryGPS())
+    //             {
+    //                 Serial.println("UBlox GNSS init succeeded, using UBlox GNSS Module\n");
+    //                 gps_model = "UBlox";
+    //                 find_gps = true;
+    //                 break;
+    //             }
+    //         }
+    //     }
+    //     else
+    //     {
+    //         gps_model = "L76K";
+    //     }
 
-    if (find_gps)
-    {
-        deviceOnline |= GPS_ONLINE;
-    }
+    //     if (find_gps)
+    //     {
+    //         deviceOnline |= GPS_ONLINE;
+    //     }
 
-#endif
+    // #endif
     Serial.println("init done . ");
 }
 
