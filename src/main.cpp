@@ -69,8 +69,6 @@ void rfidLoop()
 
 void displayLoop()
 {
-  loopPMU(NULL);
-
   display.clearBuffer();
   display.setFontMode(1);
   display.setBitmapMode(1);
@@ -80,18 +78,17 @@ void displayLoop()
   display.setFont(u8g2_font_5x8_tr);
   display.drawStr(95, 58, "v4");
 
-  uint8_t batteryLevel = PMU->getBatteryPercent();
-
-  display.setFont(u8g2_font_5x7_tr);
-  display.drawStr(1, 10, String(batteryLevel).c_str());
-  display.drawStr(15, 10, "%");
-
-  display.drawXBM(110, 2, 15, 6, battery_bitmap);
-
-  uint8_t batteryBarPixels = map(batteryLevel, 0, 100, 0, 9);
-
-  display.drawLine(113 + batteryBarPixels, 4, 113, 4);
-  display.drawLine(113 + batteryBarPixels, 5, 113, 5);
+  // joinStatus
+  if (joinStatus != EV_JOINED)
+  {
+    display.setFont(u8g2_font_5x7_tr);
+    display.drawStr(1, 10, "Joining...");
+  }
+  else
+  {
+    display.setFont(u8g2_font_5x7_tr);
+    display.drawStr(1, 10, "Connected");
+  }
 
   if (pump_dispense_counter > 0)
   {
