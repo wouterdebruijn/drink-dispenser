@@ -24,7 +24,6 @@ const lmic_pinmap lmic_pins = {
     .dio = {RADIO_DIO0_PIN, RADIO_DIO1_PIN, RADIO_DIO2_PIN}};
 
 static int spreadFactor = DR_SF7;
-static int joinStatus = EV_JOINING;
 static const unsigned TX_INTERVAL = 60; // seconds
 RfidStorage *loraWanRfidStorage = nullptr;
 
