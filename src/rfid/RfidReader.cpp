@@ -7,6 +7,10 @@ RfidReader::RfidReader(HardwareSerial *serial, uint8_t enablePin, RfidStorage *s
 
 void RfidReader::begin()
 {
+    uint8_t REGION_SET = 0;
+    uint8_t POWER_SET = 0;
+    uint8_t MODEM_SET = 0;
+
     // Reset the RFID reader by toggling the enable pin.
     pinMode(enablePin, OUTPUT);
     digitalWrite(enablePin, 0);
@@ -23,9 +27,37 @@ void RfidReader::begin()
 
     delay(2000);
 
-    // Set the serial timeout and FIFO full settings.
-    Serial.println(rfc.SetRegionFrame(REGION_CODE_EUR) ? "SUCCESS" : "Fail");
-    Serial.println(rfc.SetPaPowerFrame(0x00) ? "SUCCESS" : "Fail");
+    while (REGION_SET != 255)
+    {
+        bool success = rfc.SetRegionFrame(REGION_CODE_EUR);
+        REGION_SET = success ? 255 : REGION_SET + 1;
+
+        Serial.print("Setting region to EUR: ");
+        Serial.println(success ? "SUCCESS" : "Fail");
+
+        delay(500);
+    }
+
+    while (POWER_SET != 255)
+    {
+        bool success = rfc.SetPaPowerFrame(0);
+        POWER_SET = success ? 255 : POWER_SET + 1;
+
+        Serial.print("Setting power to 0x07D0 dBm: ");
+        Serial.println(success ? "SUCCESS" : "Fail");
+
+        delay(500);
+    }
+
+    while (MODEM_SET != 255)
+    {
+        bool success = rfc.SetDemodulatorParameterFrame({0x03, 0x06, 0x01B0});
+        MODEM_SET = success ? 255 : MODEM_SET + 1;
+
+        Serial.print("Setting modem parameters: ");
+        Serial.println(success ? "SUCCESS" : "Fail");
+        delay(500);
+    }
 }
 
 void RfidReader::parseSerial()
