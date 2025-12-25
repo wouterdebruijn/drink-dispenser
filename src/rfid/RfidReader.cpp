@@ -22,7 +22,7 @@ void RfidReader::begin()
     delay(500);
 
     // Initialize the serial communication and the RFC class.
-    serial->begin(115200, SERIAL_8N1, 2, 13);
+    serial->begin(115200, SERIAL_8N1, 13, 2);
     rfc.begin();
 
     delay(2000);
