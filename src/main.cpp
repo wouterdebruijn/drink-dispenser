@@ -4,7 +4,7 @@
 #define _TASK_SELF_DESTRUCT     // Enable tasks to "self-destruct" after disable
 
 #define RFID_ENABLE_PIN 14
-#define PUMP_PIN 15
+#define PUMP_PIN 25
 
 #include <Arduino.h>
 
