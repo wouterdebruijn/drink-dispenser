@@ -53,15 +53,15 @@ uint8_t RfidStorage::dumpTagStorage(uint8_t *buffer)
         }
 
         uint16_t tagId = this->tagIdArray[i];
-        uint16_t difference = this->tagCountArray[i] - this->tagSendCountArray[i];
+        uint16_t value = this->tagCountArray[i];
 
         this->tagIsInPayload[i] = true;
 
         // Send as two uint16_t values using big-endian format
-        buffer[bufferIndex++] = (tagId >> 8) & 0xFF;      // Store high byte
-        buffer[bufferIndex++] = tagId & 0xFF;             // Store low byte
-        buffer[bufferIndex++] = (difference >> 8) & 0xFF; // Store high byte of count
-        buffer[bufferIndex++] = difference & 0xFF;        // Store low byte of count
+        buffer[bufferIndex++] = (tagId >> 8) & 0xFF; // Store high byte
+        buffer[bufferIndex++] = tagId & 0xFF;        // Store low byte
+        buffer[bufferIndex++] = (value >> 8) & 0xFF; // Store high byte of count
+        buffer[bufferIndex++] = value & 0xFF;        // Store low byte of count
     }
 
     // End of buffer
