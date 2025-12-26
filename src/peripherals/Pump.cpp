@@ -8,7 +8,7 @@ Pump::Pump(uint8_t pin)
 void Pump::begin()
 {
     pinMode(pin, OUTPUT);
-    digitalWrite(pin, HIGH);
+    digitalWrite(pin, LOW);
 }
 
 void Interation()
@@ -18,5 +18,5 @@ void Interation()
 
 void Pump::setPumpPower(bool powerState)
 {
-    digitalWrite(pin, powerState ? LOW : HIGH);
+    digitalWrite(pin, powerState);
 }
