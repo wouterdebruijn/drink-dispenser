@@ -51,7 +51,7 @@ void RfidReader::begin()
 
     while (MODEM_SET != 255)
     {
-        bool success = rfc.SetDemodulatorParameterFrame({0x03, 0x06, 0x01B0});
+        bool success = rfc.SetDemodulatorParameterFrame({0x05, 0x06, 0x01B0});
         MODEM_SET = success ? 255 : MODEM_SET + 1;
 
         Serial.print("Setting modem parameters: ");
