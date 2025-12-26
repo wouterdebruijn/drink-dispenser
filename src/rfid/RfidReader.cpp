@@ -40,7 +40,7 @@ void RfidReader::begin()
 
     while (POWER_SET != 255)
     {
-        bool success = rfc.SetPaPowerFrame(0);
+        bool success = rfc.SetPaPowerFrame(0x00B8); // 0x00B8 = 0dBm
         POWER_SET = success ? 255 : POWER_SET + 1;
 
         Serial.print("Setting power to 0x07D0 dBm: ");
