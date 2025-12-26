@@ -3,7 +3,7 @@
 #include <RF_Commands.h>
 #include "RfidStorage.h"
 
-#define NO_TAG_LOCKOUT_THRESHOLD 2
+#define NO_TAG_LOCKOUT_THRESHOLD 5
 #define DEBUG_RFID
 
 typedef void (*PumpOnEnable)();
