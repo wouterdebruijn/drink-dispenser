@@ -142,6 +142,8 @@ void RfidReader::handleTag(const Inventory_t &label)
         return;
     }
 
+    if (value > 0 && value < 20)
+    {
     uint16_t count = storage->incrementTagCount(value, 20); // TODO change to variable from Lora
 
     pumpEnable();
@@ -149,19 +151,11 @@ void RfidReader::handleTag(const Inventory_t &label)
     lastTagId = value;
     lastTagCount = count;
 }
-
-String RfidReader::displayLine()
-{
-    if (lastTagId == 0)
+    else if (value == 0xFFFF)
     {
-        return "Waiting for tag...";
+        // Special tag only pump
+        pumpEnable();
     }
-
-    String line = "Tag: ";
-    line += String(lastTagId, HEX);
-    line += " Count: ";
-    line += String(lastTagCount);
-    return line;
 }
 
 void RfidReader::disableLockout()
