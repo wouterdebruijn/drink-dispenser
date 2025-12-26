@@ -144,13 +144,13 @@ void RfidReader::handleTag(const Inventory_t &label)
 
     if (value > 0 && value < 20)
     {
-    uint16_t count = storage->incrementTagCount(value, 20); // TODO change to variable from Lora
+        uint16_t count = storage->incrementTagCount(value, 20); // TODO change to variable from Lora
 
-    pumpEnable();
+        pumpEnable();
 
-    lastTagId = value;
-    lastTagCount = count;
-}
+        lastTagId = value;
+        lastTagCount = count;
+    }
     else if (value == 0xFFFF)
     {
         // Special tag only pump

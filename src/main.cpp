@@ -39,6 +39,7 @@ void displayLoop();
 
 #define PUMP_STEP_COUNT 6
 Task pumpOffTask(100 * TASK_MILLISECOND, PUMP_STEP_COUNT * 4, &pumpTimerCallback, &ts, false, NULL, &pumpDisableCallback);
+Task displayTask(10000 * TASK_MILLISECOND, TASK_FOREVER, &displayLoop, &ts, true);
 
 uint8_t pump_dispense_counter = 0;
 
@@ -72,21 +73,37 @@ void displayLoop()
   display.clearBuffer();
   display.setFontMode(1);
   display.setBitmapMode(1);
-  display.setFont(u8g2_font_6x12_tr);
-  display.drawStr(19, 58, "Shot Machine");
 
-  display.setFont(u8g2_font_5x8_tr);
-  display.drawStr(95, 58, "v4");
+  if (rfidReader.getLastTagId() != 0)
+  {
+    uint16_t tagId = rfidReader.getLastTagId();
+    uint16_t tagCount = rfidReader.getLastTagCount();
+
+    // Display tag ID as decimal
+    char tagIdStr[20];
+    sprintf(tagIdStr, "Cheers #%d (%d)", tagId, tagCount / 20);
+
+    display.setFont(u8g2_font_6x12_tr);
+    display.drawStr(10, 58, tagIdStr);
+  }
+  else
+  {
+    display.setFont(u8g2_font_6x12_tr);
+    display.drawStr(19, 58, "Shot Machine");
+
+    display.setFont(u8g2_font_5x8_tr);
+    display.drawStr(95, 58, "v4");
+  }
 
   // joinStatus
   if (joinStatus != EV_JOINED)
   {
-    display.setFont(u8g2_font_5x7_tr);
+    display.setFont(u8g2_font_4x6_tr);
     display.drawStr(1, 10, "Joining...");
   }
   else
   {
-    display.setFont(u8g2_font_5x7_tr);
+    display.setFont(u8g2_font_4x6_tr);
     display.drawStr(1, 10, "Connected");
   }
 
