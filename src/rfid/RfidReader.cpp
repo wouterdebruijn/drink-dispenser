@@ -89,7 +89,7 @@ void RfidReader::loop()
 
 #ifdef DEBUG_RFID
         Serial.print("EPC: ");
-        for (int i = 0; i < 12; i++)
+        for (int i = 0; i < 2; i++)
         {
             Serial.printf("%02X", label.epc[i]);
         }
@@ -133,7 +133,7 @@ void RfidReader::handleTag(const Inventory_t &label)
     // Last 2 bytes of the EPC are used as the tag ID.
     uint16_t value = 0;
 
-    value = (label.epc[10] << 8) | label.epc[11];
+    value = (label.epc[0] << 8) | label.epc[1];
     if (lastTagId == value)
     {
 #ifdef DEBUG_RFID
