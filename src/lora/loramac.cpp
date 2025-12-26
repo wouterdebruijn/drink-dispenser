@@ -10,6 +10,8 @@
 
 #include "secrets.h"
 
+int joinStatus = EV_JOINING;
+
 static const u1_t PROGMEM APPEUI[8] = {0x32, 0x0D, 0x01, 0x00, 0x00, 0xAC, 0x59, 0x00};
 // LSB mode
 static const u1_t PROGMEM DEVEUI[8] = {0x61, 0x34, 0x1B, 0x00, 0x00, 0xAC, 0x59, 0x00};
@@ -24,7 +26,7 @@ const lmic_pinmap lmic_pins = {
     .dio = {RADIO_DIO0_PIN, RADIO_DIO1_PIN, RADIO_DIO2_PIN}};
 
 static int spreadFactor = DR_SF7;
-static const unsigned TX_INTERVAL = 60; // seconds
+static unsigned TX_INTERVAL = 60; // seconds
 RfidStorage *loraWanRfidStorage = nullptr;
 
 void os_getArtEui(u1_t *buf)
@@ -96,6 +98,8 @@ void onEvent(ev_t ev)
     case EV_JOINED:
         Serial.println(F("EV_JOINED"));
         joinStatus = EV_JOINED;
+
+        TX_INTERVAL = 300; // Set to 5 minutes after join
 
         os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
 

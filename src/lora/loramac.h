@@ -7,7 +7,7 @@
 void setupLMIC(RfidStorage *storage);
 void loopLMIC(void);
 
-static int joinStatus = EV_JOINING;
+extern int joinStatus;
 
 static osjob_t sendjob;
 void do_send(osjob_t *j);
