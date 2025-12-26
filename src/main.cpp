@@ -37,8 +37,8 @@ void pumpTimerCallback();
 void pumpDisableCallback();
 void displayLoop();
 
-// 20 steps for checks and animation
-Task pumpOffTask(100 * TASK_MILLISECOND, 20, &pumpTimerCallback, &ts, false, NULL, &pumpDisableCallback);
+#define PUMP_STEP_COUNT 6
+Task pumpOffTask(100 * TASK_MILLISECOND, PUMP_STEP_COUNT * 4, &pumpTimerCallback, &ts, false, NULL, &pumpDisableCallback);
 
 uint8_t pump_dispense_counter = 0;
 
@@ -92,7 +92,7 @@ void displayLoop()
 
   if (pump_dispense_counter > 0)
   {
-    switch (pump_dispense_counter / 5)
+    switch (pump_dispense_counter / 6)
     {
     case 0:
       display.drawXBM(46, 7, 36, 39, shot_glass_frame_1);
