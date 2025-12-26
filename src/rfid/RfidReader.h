@@ -3,7 +3,7 @@
 #include <RF_Commands.h>
 #include "RfidStorage.h"
 
-#define NO_TAG_LOCKOUT_THRESHOLD 5
+#define NO_TAG_LOCKOUT_THRESHOLD 30
 #define DEBUG_RFID
 
 typedef void (*PumpOnEnable)();
@@ -15,8 +15,9 @@ public:
     void begin();
     void loop();
     void parseSerial();
-    String displayLine();
     void disableLockout();
+    uint16_t getLastTagId() const { return lastTagId; }
+    uint16_t getLastTagCount() const { return lastTagCount; }
 
 private:
     uint16_t lastTagId = 0;    // Store the last tag ID to avoid duplicates
