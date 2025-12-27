@@ -16,8 +16,8 @@ public:
     void debugPrint();
 
 private:
-    uint16_t tagIdArray[RFID_MAX_TAGS] = {0};        // Array to store tag IDs
-    uint16_t tagCountArray[RFID_MAX_TAGS] = {0};     // Array to store tag counts
-    uint16_t tagSendCountArray[RFID_MAX_TAGS] = {0}; // Array to store sent tag counts
-    bool tagIsInPayload[RFID_MAX_TAGS] = {false};    // Array to track if tag is in current payload
+    uint16_t tagIdArray[RFID_MAX_TAGS] = {0};           // Array to store tag IDs
+    uint16_t tagCountArray[RFID_MAX_TAGS] = {0};        // Array to store tag counts
+    uint8_t tagSendRemainingArray[RFID_MAX_TAGS] = {0}; // Array keeping track of remaining sends per tag, we send each tag 3 times
+    bool tagIsInPayload[RFID_MAX_TAGS] = {false};       // Array to track if tag is in current payload
 };

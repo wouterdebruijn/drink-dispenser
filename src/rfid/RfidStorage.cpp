@@ -33,7 +33,7 @@ uint16_t RfidStorage::incrementTagCount(uint16_t tagId, uint16_t increment)
         {
             tagIdArray[i] = tagId;
             this->tagCountArray[i] = increment; // Set the count for the new tag
-            this->tagSendCountArray[i] = 0;     // Initialize the sent count for the new tag
+            this->tagSendRemainingArray[i] = 3; // Initialize the remaining sends for the new tag
 
             Serial.printf("New Tag ID %04X added with count: %d\n", tagId, this->tagCountArray[i]);
 
@@ -50,7 +50,7 @@ uint8_t RfidStorage::dumpTagStorage(uint8_t *buffer)
 
     for (int i = 0; i < RFID_MAX_TAGS; i++)
     {
-        if (this->tagSendCountArray[i] == this->tagCountArray[i]) // Only dump changed tags
+        if (this->tagSendRemainingArray[i] == 0) // Only dump changed tags
         {
             continue; // Skip unchanged tags
         }
@@ -78,7 +78,15 @@ void RfidStorage::clearChangedTags()
         if (this->tagIsInPayload[i])
         {
             this->tagIsInPayload[i] = false;
-            this->tagSendCountArray[i] = this->tagCountArray[i];
+
+            // Decrease the remaining send count for each tag sent
+            for (int j = 0; j < this->tagSendRemainingArray[i]; j++)
+            {
+                if (this->tagSendRemainingArray[i] > 0)
+                {
+                    this->tagSendRemainingArray[i]--;
+                }
+            }
         }
     }
 }
