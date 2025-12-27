@@ -19,6 +19,7 @@ uint16_t RfidStorage::incrementTagCount(uint16_t tagId, uint16_t increment)
         if (this->tagIdArray[i] == tagId)
         {
             this->tagCountArray[i] += increment; // Increment the count for the existing tag
+            this->tagSendRemainingArray[i] = 3;  // We got a new value, reset the remaining sends
 
             Serial.printf("Tag ID %04X incremented by %d, new count: %d\n", tagId, increment, this->tagCountArray[i]);
 
