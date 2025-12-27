@@ -79,13 +79,9 @@ void RfidStorage::clearChangedTags()
         {
             this->tagIsInPayload[i] = false;
 
-            // Decrease the remaining send count for each tag sent
-            for (int j = 0; j < this->tagSendRemainingArray[i]; j++)
+            if (this->tagSendRemainingArray[i] > 0)
             {
-                if (this->tagSendRemainingArray[i] > 0)
-                {
-                    this->tagSendRemainingArray[i]--;
-                }
+                this->tagSendRemainingArray[i]--;
             }
         }
     }
