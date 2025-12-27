@@ -136,7 +136,7 @@ void displayLoop()
   display.sendBuffer();
 }
 
-Task rfidTask(500 * TASK_MILLISECOND, TASK_FOREVER, &rfidLoop, &ts, true);
+Task rfidTask(250 * TASK_MILLISECOND, TASK_FOREVER, &rfidLoop, &ts, true);
 
 void setup()
 {
