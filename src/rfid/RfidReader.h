@@ -4,7 +4,7 @@
 #include "RfidStorage.h"
 
 #define NO_TAG_LOCKOUT_THRESHOLD 30
-#define DEBUG_RFID
+// #define DEBUG_RFID
 
 typedef void (*PumpOnEnable)();
 
