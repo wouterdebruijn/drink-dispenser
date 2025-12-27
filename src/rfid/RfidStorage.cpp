@@ -34,6 +34,9 @@ uint16_t RfidStorage::incrementTagCount(uint16_t tagId, uint16_t increment)
             tagIdArray[i] = tagId;
             this->tagCountArray[i] = increment; // Set the count for the new tag
             this->tagSendCountArray[i] = 0;     // Initialize the sent count for the new tag
+
+            Serial.printf("New Tag ID %04X added with count: %d\n", tagId, this->tagCountArray[i]);
+
             return this->tagCountArray[i];
         }
     }
