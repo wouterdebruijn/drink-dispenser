@@ -34,7 +34,9 @@ static const char ADMIN_HTML[] PROGMEM = R"rawhtml(<!DOCTYPE html>
     <label>Password</label>
     <input name="pass" type="password" maxlength="64" placeholder="(unchanged)" autocomplete="new-password">
     <label>HTTP Endpoint URL</label>
-    <input name="endpoint" type="text" maxlength="128" value="%ENDPOINT%" placeholder="http://server/api/shots">
+    <input name="endpoint" type="text" maxlength="128" value="%ENDPOINT%" placeholder="http://server/api/device">
+    <label>Device Secret</label>
+    <input name="secret" type="password" maxlength="64" placeholder="(unchanged)" autocomplete="new-password">
     <label>Transport mode</label>
     <select name="transport">
       <option value="0"%SEL_LORA%>LoRaWAN only</option>
@@ -185,6 +187,12 @@ void WifiManager::_doHttpPost()
     HTTPClient http;
     http.begin(_endpoint);
     http.addHeader("Content-Type", "application/json");
+    if (_secret[0] != '\0')
+    {
+        char authHeader[80];
+        snprintf(authHeader, sizeof(authHeader), "Bearer %s", _secret);
+        http.addHeader("Authorization", authHeader);
+    }
     http.setTimeout(3000);
 
     Serial.printf("WifiManager: POST %s\n", _endpoint);
@@ -245,6 +253,7 @@ void WifiManager::_loadSettings()
     String ssid     = _prefs.getString("ssid",      "");
     String pass     = _prefs.getString("pass",      "");
     String endpoint = _prefs.getString("endpoint",  "");
+    String secret   = _prefs.getString("secret",    "");
     _transport      = (TransportMode)_prefs.getUChar("transport", TRANSPORT_BOTH);
     _configured     = _prefs.getBool("configured",  false);
     _prefs.end();
@@ -252,6 +261,7 @@ void WifiManager::_loadSettings()
     strlcpy(_ssid,     ssid.c_str(),     sizeof(_ssid));
     strlcpy(_pass,     pass.c_str(),     sizeof(_pass));
     strlcpy(_endpoint, endpoint.c_str(), sizeof(_endpoint));
+    strlcpy(_secret,   secret.c_str(),   sizeof(_secret));
 }
 
 void WifiManager::_persistSettings()
@@ -260,6 +270,7 @@ void WifiManager::_persistSettings()
     _prefs.putString("ssid",       _ssid);
     _prefs.putString("pass",       _pass);
     _prefs.putString("endpoint",   _endpoint);
+    _prefs.putString("secret",     _secret);
     _prefs.putUChar("transport",   (uint8_t)_transport);
     _prefs.putBool("configured",   true);
     _prefs.end();
@@ -298,16 +309,19 @@ void WifiManager::_handleRoot()
 
 void WifiManager::_handleSave()
 {
-    String ssid     = _server.arg("ssid");
-    String pass     = _server.arg("pass");
-    String endpoint = _server.arg("endpoint");
+    String ssid      = _server.arg("ssid");
+    String pass      = _server.arg("pass");
+    String endpoint  = _server.arg("endpoint");
+    String secret    = _server.arg("secret");
     String transport = _server.arg("transport");
 
     strlcpy(_ssid, ssid.c_str(), sizeof(_ssid));
 
-    // Only update password if a new one was provided
+    // Only update password/secret if a new value was provided
     if (pass.length() > 0)
         strlcpy(_pass, pass.c_str(), sizeof(_pass));
+    if (secret.length() > 0)
+        strlcpy(_secret, secret.c_str(), sizeof(_secret));
 
     strlcpy(_endpoint, endpoint.c_str(), sizeof(_endpoint));
     _transport = (TransportMode)transport.toInt();

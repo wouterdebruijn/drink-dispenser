@@ -57,6 +57,7 @@ private:
     char _ssid[33]      = {0};
     char _pass[65]      = {0};
     char _endpoint[129] = {0};
+    char _secret[65]    = {0};
 
     unsigned long _connectStartMs = 0;
     static const unsigned long CONNECT_TIMEOUT_MS = 10000;
