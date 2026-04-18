@@ -8,6 +8,11 @@
 
 #include <Arduino.h>
 
+// Increase the Arduino loop task stack from the default 8 KB.
+// WiFi init (WebServer + lwIP + tcpip_adapter) needs more stack than the
+// default allows when combined with LoRa/I2C/SPI setup already on the stack.
+SET_LOOP_TASK_STACK_SIZE(16384);
+
 #include "lora/loramac.h"
 #include "lora/LoRaBoards.h"
 
@@ -124,7 +129,7 @@ void displayLoop()
     strlcpy(statusLine, "WiFi conn...", sizeof(statusLine));
     break;
   case WIFI_STATE_CONNECTED:
-    strlcpy(statusLine, "WiFi OK", sizeof(statusLine));
+    snprintf(statusLine, sizeof(statusLine), "%s", WiFi.localIP().toString().c_str());
     break;
   default:
     strlcpy(statusLine, joinStatus == EV_JOINED ? "LoRa OK" : "LoRa joining...", sizeof(statusLine));

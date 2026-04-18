@@ -69,6 +69,14 @@ void WifiManager::begin()
 {
     _loadSettings();
 
+    // Initialise the WiFi driver and TCP/IP stack unconditionally with
+    // WIFI_STA first — this is the path that reliably calls _init() →
+    // tcpip_adapter_init() on ESP32 Arduino 2.x / IDF 4.4.x.
+    // Switching to AP mode afterwards (in _startAP) is safe once init is done.
+    WiFi.persistent(false);
+    WiFi.mode(WIFI_STA);
+    delay(150);
+
     // Register web server routes using lambdas
     _server.on("/",      HTTP_GET,  [this]() { _handleRoot(); });
     _server.on("/save",  HTTP_POST, [this]() { _handleSave(); });
@@ -91,7 +99,8 @@ void WifiManager::begin()
 
 void WifiManager::loop()
 {
-    _dns.processNextRequest();
+    if (_state == WIFI_STATE_AP || _state == WIFI_STATE_FALLBACK_AP)
+        _dns.processNextRequest();
     _server.handleClient();
 
     switch (_state)
@@ -154,7 +163,10 @@ void WifiManager::trySendData()
 
 void WifiManager::_startAP()
 {
-    WiFi.mode(WIFI_AP_STA);
+    // Stack is already initialised (WIFI_STA was set in begin()).
+    // Switch to AP mode and start the captive portal.
+    WiFi.mode(WIFI_AP);
+    delay(100);
     WiFi.softAP("ShotMachine-Config");
     _dns.start(53, "*", IPAddress(192, 168, 4, 1));
     Serial.println("WifiManager: AP started — SSID: ShotMachine-Config, IP: 192.168.4.1");
@@ -165,12 +177,13 @@ void WifiManager::_stopAP()
 {
     _dns.stop();
     WiFi.softAPdisconnect(true);
+    delay(50);
     WiFi.mode(WIFI_STA);
 }
 
 void WifiManager::_startSTA()
 {
-    WiFi.mode(WIFI_STA);
+    // Mode is already WIFI_STA from begin(); just start the connection.
     WiFi.begin(_ssid, _pass);
     Serial.printf("WifiManager: connecting to %s\n", _ssid);
 }
@@ -249,13 +262,13 @@ void WifiManager::_buildJson(const uint8_t *buf, uint8_t len,
 
 void WifiManager::_loadSettings()
 {
-    _prefs.begin("wifi_cfg", true); // read-only
-    String ssid     = _prefs.getString("ssid",      "");
-    String pass     = _prefs.getString("pass",      "");
-    String endpoint = _prefs.getString("endpoint",  "");
-    String secret   = _prefs.getString("secret",    "");
+    _prefs.begin("wifi_cfg", false); // read-write so namespace is created on first boot
+    String ssid     = _prefs.isKey("ssid")      ? _prefs.getString("ssid")     : "";
+    String pass     = _prefs.isKey("pass")      ? _prefs.getString("pass")     : "";
+    String endpoint = _prefs.isKey("endpoint")  ? _prefs.getString("endpoint") : "";
+    String secret   = _prefs.isKey("secret")    ? _prefs.getString("secret")   : "";
     _transport      = (TransportMode)_prefs.getUChar("transport", TRANSPORT_BOTH);
-    _configured     = _prefs.getBool("configured",  false);
+    _configured     = _prefs.getBool("configured", false);
     _prefs.end();
 
     strlcpy(_ssid,     ssid.c_str(),     sizeof(_ssid));

@@ -6,8 +6,10 @@
 void RfidStorage::load()
 {
     _prefs.begin("rfid", false);
-    _prefs.getBytes("tagIds",    tagIdArray,    sizeof(tagIdArray));
-    _prefs.getBytes("tagCounts", tagCountArray, sizeof(tagCountArray));
+    if (_prefs.isKey("tagIds"))
+        _prefs.getBytes("tagIds",    tagIdArray,    sizeof(tagIdArray));
+    if (_prefs.isKey("tagCounts"))
+        _prefs.getBytes("tagCounts", tagCountArray, sizeof(tagCountArray));
     _prefs.end();
 
     for (int i = 0; i < RFID_MAX_TAGS; i++)
