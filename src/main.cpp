@@ -18,6 +18,8 @@
 
 #include "peripherals/Pump.h"
 
+#include "wifi/WifiManager.h"
+
 #include <TaskScheduler.h>
 
 int freeMemory() { return ESP.getFreeHeap(); }
@@ -25,6 +27,7 @@ int freeMemory() { return ESP.getFreeHeap(); }
 Scheduler ts;
 
 RfidStorage rfidStorage;
+WifiManager wifiManager(&rfidStorage);
 
 void enablePumpForDuration();
 
@@ -36,10 +39,14 @@ Display display;
 void pumpTimerCallback();
 void pumpDisableCallback();
 void displayLoop();
+void wifiLoop();
+void wifiSendCheck();
 
 #define PUMP_STEP_COUNT 6
 Task pumpOffTask(100 * TASK_MILLISECOND, PUMP_STEP_COUNT * 4, &pumpTimerCallback, &ts, false, NULL, &pumpDisableCallback);
 Task displayTask(10000 * TASK_MILLISECOND, TASK_FOREVER, &displayLoop, &ts, true);
+Task wifiTask(100 * TASK_MILLISECOND, TASK_FOREVER, &wifiLoop, &ts, true);
+Task wifiSendTask(30000 * TASK_MILLISECOND, TASK_FOREVER, &wifiSendCheck, &ts, true);
 
 uint8_t pump_dispense_counter = 0;
 
@@ -66,6 +73,16 @@ void enablePumpForDuration()
 void rfidLoop()
 {
   rfidReader.loop();
+}
+
+void wifiLoop()
+{
+  wifiManager.loop();
+}
+
+void wifiSendCheck()
+{
+  wifiManager.trySendData();
 }
 
 void displayLoop()
@@ -95,17 +112,26 @@ void displayLoop()
     display.drawStr(95, 58, "v4");
   }
 
-  // joinStatus
-  if (joinStatus != EV_JOINED)
+  // Connection status line (top-left)
+  char statusLine[22] = {0};
+  switch (wifiManager.getState())
   {
-    display.setFont(u8g2_font_4x6_tr);
-    display.drawStr(1, 10, "Joining...");
+  case WIFI_STATE_AP:
+  case WIFI_STATE_FALLBACK_AP:
+    strlcpy(statusLine, "AP:192.168.4.1", sizeof(statusLine));
+    break;
+  case WIFI_STATE_CONNECTING:
+    strlcpy(statusLine, "WiFi conn...", sizeof(statusLine));
+    break;
+  case WIFI_STATE_CONNECTED:
+    strlcpy(statusLine, "WiFi OK", sizeof(statusLine));
+    break;
+  default:
+    strlcpy(statusLine, joinStatus == EV_JOINED ? "LoRa OK" : "LoRa joining...", sizeof(statusLine));
+    break;
   }
-  else
-  {
-    display.setFont(u8g2_font_4x6_tr);
-    display.drawStr(1, 10, "Connected");
-  }
+  display.setFont(u8g2_font_4x6_tr);
+  display.drawStr(1, 10, statusLine);
 
   if (pump_dispense_counter > 0)
   {
@@ -143,7 +169,10 @@ void setup()
   setupBoards();
   // When the power is turned on, a delay is required.
   delay(1500);
+  rfidStorage.load();
+  wifiManager.begin();
   setupLMIC(&rfidStorage);
+  setLoraTransport(wifiManager.getTransport());
 
   rfidReader.begin();
   pump.begin();

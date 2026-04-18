@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <Preferences.h>
 #include <WString.h>
 
 #define RFID_ID_LENGTH 12
@@ -10,12 +11,16 @@ class RfidStorage
 {
 public:
     RfidStorage() = default;
+    void load();
+    void reset();
     uint16_t incrementTagCount(uint16_t tagId, uint16_t increment);
     uint8_t dumpTagStorage(uint8_t *buffer);
     void clearChangedTags();
     void debugPrint();
 
 private:
+    void _persist();
+    Preferences _prefs;
     uint16_t tagIdArray[RFID_MAX_TAGS] = {0};           // Array to store tag IDs
     uint16_t tagCountArray[RFID_MAX_TAGS] = {0};        // Array to store tag counts
     uint8_t tagSendRemainingArray[RFID_MAX_TAGS] = {0}; // Array keeping track of remaining sends per tag, we send each tag 3 times

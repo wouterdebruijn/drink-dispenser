@@ -3,6 +3,38 @@
 #include <Arduino.h>
 #include <WString.h>
 
+void RfidStorage::load()
+{
+    _prefs.begin("rfid", false);
+    _prefs.getBytes("tagIds",    tagIdArray,    sizeof(tagIdArray));
+    _prefs.getBytes("tagCounts", tagCountArray, sizeof(tagCountArray));
+    _prefs.end();
+
+    for (int i = 0; i < RFID_MAX_TAGS; i++)
+    {
+        if (tagCountArray[i] > 0)
+            tagSendRemainingArray[i] = 3;
+    }
+}
+
+void RfidStorage::_persist()
+{
+    _prefs.begin("rfid", false);
+    _prefs.putBytes("tagIds",    tagIdArray,    sizeof(tagIdArray));
+    _prefs.putBytes("tagCounts", tagCountArray, sizeof(tagCountArray));
+    _prefs.end();
+}
+
+void RfidStorage::reset()
+{
+    memset(tagIdArray,            0, sizeof(tagIdArray));
+    memset(tagCountArray,         0, sizeof(tagCountArray));
+    memset(tagSendRemainingArray, 0, sizeof(tagSendRemainingArray));
+    memset(tagIsInPayload,        0, sizeof(tagIsInPayload));
+    _persist();
+    Serial.println("RfidStorage: all shot counts reset.");
+}
+
 void RfidStorage::debugPrint()
 {
     Serial.println("RFID Tag Ids:");
@@ -23,6 +55,7 @@ uint16_t RfidStorage::incrementTagCount(uint16_t tagId, uint16_t increment)
 
             Serial.printf("Tag ID %04X incremented by %d, new count: %d\n", tagId, increment, this->tagCountArray[i]);
 
+            _persist();
             return this->tagCountArray[i];
         }
     }
@@ -38,6 +71,7 @@ uint16_t RfidStorage::incrementTagCount(uint16_t tagId, uint16_t increment)
 
             Serial.printf("New Tag ID %04X added with count: %d\n", tagId, this->tagCountArray[i]);
 
+            _persist();
             return this->tagCountArray[i];
         }
     }

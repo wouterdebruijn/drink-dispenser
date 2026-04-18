@@ -28,6 +28,12 @@ const lmic_pinmap lmic_pins = {
 static int spreadFactor = DR_SF7;
 static unsigned TX_INTERVAL = 60; // seconds
 RfidStorage *loraWanRfidStorage = nullptr;
+static TransportMode currentTransport = TRANSPORT_BOTH;
+
+void setLoraTransport(TransportMode mode)
+{
+    currentTransport = mode;
+}
 
 void os_getArtEui(u1_t *buf)
 {
@@ -46,6 +52,15 @@ void os_getDevKey(u1_t *buf)
 
 void do_send(osjob_t *j)
 {
+    // Skip LoRa send when WiFi is the sole transport; keep rescheduling
+    // so switching back to LORA/BOTH doesn't require a reboot.
+    if (currentTransport == TRANSPORT_WIFI)
+    {
+        Serial.println(F("LoRa send skipped (WiFi transport active)"));
+        os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
+        return;
+    }
+
     // Check if there is not a current TX/RX job running
     if (LMIC.opmode & OP_TXRXPEND)
     {
@@ -121,8 +136,9 @@ void onEvent(ev_t ev)
     case EV_TXCOMPLETE:
         Serial.println(F("EV_TXCOMPLETE (includes waiting for RX windows)"));
 
-        // Post TX processing ack data sending for RFID storage
-        loraWanRfidStorage->clearChangedTags();
+        // Only clear tags when LoRa is actually responsible for delivery
+        if (currentTransport != TRANSPORT_WIFI)
+            loraWanRfidStorage->clearChangedTags();
 
         if (LMIC.txrxFlags & TXRX_ACK)
             Serial.println(F("Received ack"));
