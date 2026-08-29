@@ -53,6 +53,9 @@ void do_send(osjob_t *j)
     }
     else
     {
+        // Persist tag counts in case of powerdown, only stored on TX interval to limit writes to flash
+        loraWanRfidStorage->storeTagData();
+
         static uint8_t buffer[RFID_MAX_TAGS * 4] = {0}; // Buffer to hold the output
 
         // Convert the message to a char array

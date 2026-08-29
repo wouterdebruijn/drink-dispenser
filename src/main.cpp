@@ -7,6 +7,8 @@
 #define PUMP_PIN 25
 
 #include <Arduino.h>
+#include <TaskScheduler.h>
+#include <Preferences.h>
 
 #include "lora/loramac.h"
 #include "lora/LoRaBoards.h"
@@ -15,18 +17,14 @@
 #include "rfid/RfidStorage.h"
 
 #include "display/Display.h"
-
 #include "peripherals/Pump.h"
 
-#include <TaskScheduler.h>
-
 int freeMemory() { return ESP.getFreeHeap(); }
+void enablePumpForDuration();
 
 Scheduler ts;
-
-RfidStorage rfidStorage;
-
-void enablePumpForDuration();
+Preferences mySketchPrefs;
+RfidStorage rfidStorage(mySketchPrefs);
 
 HardwareSerial SerialRF(2);
 RfidReader rfidReader(&SerialRF, RFID_ENABLE_PIN, &rfidStorage, &enablePumpForDuration);
@@ -144,6 +142,9 @@ void setup()
   // When the power is turned on, a delay is required.
   delay(1500);
   setupLMIC(&rfidStorage);
+
+  mySketchPrefs.begin("rfid", false);
+  rfidStorage.begin();
 
   rfidReader.begin();
   pump.begin();
