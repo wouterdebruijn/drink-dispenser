@@ -1,5 +1,7 @@
 #include "Menu.h"
 
+#include <WiFi.h>
+
 #include "../lora/loramac.h"
 
 Menu::Menu(Button *button,
@@ -81,21 +83,10 @@ void Menu::selectCurrentItem()
         _rfidStorage->clearTagData();
         break;
 
-    case MenuItem::ToggleWifi:
-    {
+    case MenuItem::CycleMode:
         // Persisted only; applied on the next boot (use the Reboot item).
-        bool enabled = _systemPrefs->getBool("wifiEnabled", false);
-        _systemPrefs->putBool("wifiEnabled", !enabled);
+        cycleMode();
         break;
-    }
-
-    case MenuItem::ToggleLora:
-    {
-        // Persisted only; applied on the next boot (use the Reboot item).
-        bool enabled = _systemPrefs->getBool("loraEnabled", true);
-        _systemPrefs->putBool("loraEnabled", !enabled);
-        break;
-    }
 
     case MenuItem::Reboot:
         reboot();
@@ -110,6 +101,53 @@ void Menu::selectCurrentItem()
     }
 
     render();
+}
+
+void Menu::cycleMode()
+{
+    // Resolve the current mode to an index using the same priority as boot
+    // (AP > WiFi > LoRa > Offline), then advance one step in the cycle:
+    // 0 Offline -> 1 LoRa -> 2 WiFi -> 3 WiFi AP -> 0 Offline.
+    uint8_t current;
+    if (_systemPrefs->getBool("wifiApEnabled", false))
+    {
+        current = 3;
+    }
+    else if (_systemPrefs->getBool("wifiEnabled", false))
+    {
+        current = 2;
+    }
+    else if (_systemPrefs->getBool("loraEnabled", true))
+    {
+        current = 1;
+    }
+    else
+    {
+        current = 0;
+    }
+
+    uint8_t next = (current + 1) % 4;
+
+    _systemPrefs->putBool("loraEnabled", next == 1);
+    _systemPrefs->putBool("wifiEnabled", next == 2);
+    _systemPrefs->putBool("wifiApEnabled", next == 3);
+}
+
+const char *Menu::modeName()
+{
+    if (_systemPrefs->getBool("wifiApEnabled", false))
+    {
+        return "WiFi AP";
+    }
+    if (_systemPrefs->getBool("wifiEnabled", false))
+    {
+        return "WiFi";
+    }
+    if (_systemPrefs->getBool("loraEnabled", true))
+    {
+        return "LoRa";
+    }
+    return "Offline";
 }
 
 void Menu::reboot()
@@ -163,19 +201,24 @@ void Menu::renderStatus()
         _display->drawStr(95, 58, "v4");
     }
 
-    // LoRa link status
+    // Connectivity mode status. Only one of AP / WiFi / LoRa is ever active;
+    // otherwise the device is offline.
     _display->setFont(u8g2_font_4x6_tr);
-    if (!_systemPrefs->getBool("loraEnabled", true))
+    if (_systemPrefs->getBool("wifiApEnabled", false))
     {
-        _display->drawStr(1, 10, "LoRa Off");
+        _display->drawStr(1, 10, "AP Config");
     }
-    else if (joinStatus != EV_JOINED)
+    else if (_systemPrefs->getBool("wifiEnabled", false))
     {
-        _display->drawStr(1, 10, "Joining...");
+        _display->drawStr(1, 10, WiFi.status() == WL_CONNECTED ? "WiFi Connected" : "WiFi...");
+    }
+    else if (_systemPrefs->getBool("loraEnabled", true))
+    {
+        _display->drawStr(1, 10, joinStatus == EV_JOINED ? "LoRa Connected" : "LoRa Joining...");
     }
     else
     {
-        _display->drawStr(1, 10, "Connected");
+        _display->drawStr(1, 10, "Offline");
     }
 
     if (_pumpProgress > 0)
@@ -207,13 +250,9 @@ void Menu::renderStatus()
 
 void Menu::renderMenu()
 {
-    bool wifiEnabled = _systemPrefs->getBool("wifiEnabled", false);
-    bool loraEnabled = _systemPrefs->getBool("loraEnabled", true);
-
     char labels[static_cast<uint8_t>(MenuItem::Count)][20];
     strcpy(labels[static_cast<uint8_t>(MenuItem::ResetTagCache)], "Reset Tag Cache");
-    sprintf(labels[static_cast<uint8_t>(MenuItem::ToggleWifi)], "WiFi: %s", wifiEnabled ? "ON" : "OFF");
-    sprintf(labels[static_cast<uint8_t>(MenuItem::ToggleLora)], "LoRa: %s", loraEnabled ? "ON" : "OFF");
+    sprintf(labels[static_cast<uint8_t>(MenuItem::CycleMode)], "Mode: %s", modeName());
     strcpy(labels[static_cast<uint8_t>(MenuItem::Reboot)], "Reboot");
     strcpy(labels[static_cast<uint8_t>(MenuItem::Exit)], "Exit");
 

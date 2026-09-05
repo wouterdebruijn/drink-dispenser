@@ -24,6 +24,10 @@
 
 #include "wifi/WifiClient.h"
 #include "wifi/HttpServer.h"
+#include "wifi/WifiReporter.h"
+
+#define WIFI_AP_SSID "ShotMachine-Setup"
+#define WIFI_AP_PASSWORD "shotmachine"
 
 int freeMemory() { return ESP.getFreeHeap(); }
 void enablePumpForDuration();
@@ -33,9 +37,17 @@ Preferences systemPrefs;
 Preferences rfidStoragePrefs;
 RfidStorage rfidStorage(rfidStoragePrefs);
 
-// Whether the LoRa stack was started this boot. When false the modem is left
-// unpowered and the LMIC runloop never runs.
-bool loraEnabled = true;
+// The single connectivity mode resolved at boot from the persisted booleans.
+// Only one is ever active; everything else follows from this value.
+enum class ConnectivityMode : uint8_t
+{
+  Offline,
+  Lora,
+  Wifi,
+  WifiAp,
+};
+
+ConnectivityMode connectivityMode = ConnectivityMode::Lora;
 
 HardwareSerial SerialRF(2);
 RfidReader rfidReader(&SerialRF, RFID_ENABLE_PIN, &rfidStorage, &enablePumpForDuration);
@@ -43,6 +55,10 @@ Pump pump(PUMP_PIN);
 Display display;
 Button menuButton(MENU_BUTTON_PIN);
 Menu menu(&menuButton, &display, &rfidReader, &rfidStorage, &systemPrefs, &enablePumpForDuration);
+
+WifiClient wifi;
+HttpServer httpServer(&systemPrefs);
+WifiReporter wifiReporter(&rfidStorage);
 
 void pumpTimerCallback();
 void pumpDisableCallback();
@@ -91,24 +107,64 @@ void displayLoop()
   menu.render();
 }
 
+// Resolve the persisted mode booleans to a single active mode. Priority
+// AP > WiFi > LoRa > Offline guards against any inconsistent stored state.
+ConnectivityMode resolveConnectivityMode()
+{
+  if (systemPrefs.getBool("wifiApEnabled", false))
+  {
+    return ConnectivityMode::WifiAp;
+  }
+  if (systemPrefs.getBool("wifiEnabled", false))
+  {
+    return ConnectivityMode::Wifi;
+  }
+  if (systemPrefs.getBool("loraEnabled", true))
+  {
+    return ConnectivityMode::Lora;
+  }
+  return ConnectivityMode::Offline;
+}
+
 void setup()
 {
   systemPrefs.begin("system", false);
 
-  loraEnabled = systemPrefs.getBool("loraEnabled", true);
+  connectivityMode = resolveConnectivityMode();
 
   setupBoards();
   // When the power is turned on, a delay is required.
   delay(1500);
 
-  if (loraEnabled)
+  switch (connectivityMode)
   {
+  case ConnectivityMode::Lora:
     setupLMIC(&rfidStorage);
-  }
-  else
+    break;
+
+  case ConnectivityMode::Wifi:
   {
-    // Cut power to the LoRa modem so it draws nothing while disabled.
+    // Cut power to the LoRa modem; WiFi mode reports over HTTPS instead.
     setRadioPower(false);
+    String ssid = systemPrefs.getString("wifiSsid", "");
+    String password = systemPrefs.getString("wifiPassword", "");
+    wifi.beginStation(ssid.c_str(), password.c_str());
+    wifiReporter.begin();
+    break;
+  }
+
+  case ConnectivityMode::WifiAp:
+    // Configuration only: bring up the SoftAP + config web server, no radio.
+    setRadioPower(false);
+    wifi.beginAccessPoint(WIFI_AP_SSID, WIFI_AP_PASSWORD);
+    httpServer.begin();
+    break;
+
+  case ConnectivityMode::Offline:
+  default:
+    // No connectivity; leave the modem unpowered.
+    setRadioPower(false);
+    break;
   }
 
   rfidStoragePrefs.begin("rfid", false);
@@ -131,10 +187,28 @@ bool rfidScheduled = false;
 
 void loop()
 {
-  if (loraEnabled)
+  switch (connectivityMode)
   {
+  case ConnectivityMode::Lora:
     loopLMIC();
+    break;
+
+  case ConnectivityMode::Wifi:
+    wifiReporter.loop();
+    break;
+
+  case ConnectivityMode::WifiAp:
+    // Configuration only: serve the config page and keep the menu responsive
+    // (so the user can switch modes and reboot). No dispensing/reporting.
+    httpServer.handleClient();
+    menu.loop();
+    return;
+
+  case ConnectivityMode::Offline:
+  default:
+    break;
   }
+
   rfidReader.parseSerial();
   menu.loop();
   ts.execute();

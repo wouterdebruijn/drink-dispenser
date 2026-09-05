@@ -44,8 +44,7 @@ private:
     enum class MenuItem : uint8_t
     {
         ResetTagCache,
-        ToggleWifi,
-        ToggleLora,
+        CycleMode,
         Reboot,
         Exit,
         Count,
@@ -55,6 +54,12 @@ private:
     void renderMenu();
     void openMenu();
     void selectCurrentItem();
+    // Advance the persisted connectivity mode to the next in the cycle
+    // (Offline -> LoRa -> WiFi -> WiFi AP -> Offline). Only one mode is ever
+    // persisted; applied on the next boot.
+    void cycleMode();
+    // Human-readable name of the currently persisted connectivity mode.
+    const char *modeName();
     void reboot();
 
     Button *_button;

@@ -5,21 +5,31 @@ WifiClient::WifiClient()
     // Constructor implementation (if needed)
 }
 
-void WifiClient::begin(char *ssid, char *password)
+void WifiClient::beginStation(const char *ssid, const char *password)
 {
-    WiFi.mode(WIFI_STA); // Set WiFi to station mode
+    WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
 
 #ifdef DEBUG
-    Serial.print("Connecting to WiFi");
+    Serial.print("Connecting to WiFi SSID: ");
+    Serial.println(ssid);
 #endif
+}
 
-    // Wait for connection
-    while (WiFi.status() != WL_CONNECTED)
-    {
+void WifiClient::beginAccessPoint(const char *apSsid, const char *apPassword)
+{
+    WiFi.mode(WIFI_AP);
+    WiFi.softAP(apSsid, apPassword);
+
 #ifdef DEBUG
-        Serial.print(".");
+    Serial.print("Started SoftAP: ");
+    Serial.println(apSsid);
+    Serial.print("AP IP address: ");
+    Serial.println(WiFi.softAPIP());
 #endif
-        delay(500);
-    }
+}
+
+bool WifiClient::connected()
+{
+    return WiFi.status() == WL_CONNECTED;
 }
