@@ -33,6 +33,10 @@ Preferences systemPrefs;
 Preferences rfidStoragePrefs;
 RfidStorage rfidStorage(rfidStoragePrefs);
 
+// Whether the LoRa stack was started this boot. When false the modem is left
+// unpowered and the LMIC runloop never runs.
+bool loraEnabled = true;
+
 HardwareSerial SerialRF(2);
 RfidReader rfidReader(&SerialRF, RFID_ENABLE_PIN, &rfidStorage, &enablePumpForDuration);
 Pump pump(PUMP_PIN);
@@ -91,16 +95,21 @@ void setup()
 {
   systemPrefs.begin("system", false);
 
-  bool loraEnabled = systemPrefs.getBool("loraEnabled", true);
+  loraEnabled = systemPrefs.getBool("loraEnabled", true);
 
   setupBoards();
   // When the power is turned on, a delay is required.
   delay(1500);
 
-  // if (loraEnabled)
-  // {
-  setupLMIC(&rfidStorage);
-  // }
+  if (loraEnabled)
+  {
+    setupLMIC(&rfidStorage);
+  }
+  else
+  {
+    // Cut power to the LoRa modem so it draws nothing while disabled.
+    setRadioPower(false);
+  }
 
   rfidStoragePrefs.begin("rfid", false);
   rfidStorage.begin();
@@ -122,7 +131,10 @@ bool rfidScheduled = false;
 
 void loop()
 {
-  loopLMIC();
+  if (loraEnabled)
+  {
+    loopLMIC();
+  }
   rfidReader.parseSerial();
   menu.loop();
   ts.execute();

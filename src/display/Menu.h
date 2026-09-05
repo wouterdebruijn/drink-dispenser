@@ -46,6 +46,7 @@ private:
         ResetTagCache,
         ToggleWifi,
         ToggleLora,
+        Reboot,
         Exit,
         Count,
     };
@@ -54,6 +55,7 @@ private:
     void renderMenu();
     void openMenu();
     void selectCurrentItem();
+    void reboot();
 
     Button *_button;
     Display *_display;

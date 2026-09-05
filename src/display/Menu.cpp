@@ -83,7 +83,7 @@ void Menu::selectCurrentItem()
 
     case MenuItem::ToggleWifi:
     {
-        // Persisted; applied on next boot.
+        // Persisted only; applied on the next boot (use the Reboot item).
         bool enabled = _systemPrefs->getBool("wifiEnabled", false);
         _systemPrefs->putBool("wifiEnabled", !enabled);
         break;
@@ -91,11 +91,15 @@ void Menu::selectCurrentItem()
 
     case MenuItem::ToggleLora:
     {
-        // Persisted; applied on next boot.
+        // Persisted only; applied on the next boot (use the Reboot item).
         bool enabled = _systemPrefs->getBool("loraEnabled", true);
         _systemPrefs->putBool("loraEnabled", !enabled);
         break;
     }
+
+    case MenuItem::Reboot:
+        reboot();
+        return;
 
     case MenuItem::Exit:
         _screen = Screen::Status;
@@ -106,6 +110,16 @@ void Menu::selectCurrentItem()
     }
 
     render();
+}
+
+void Menu::reboot()
+{
+    _display->clearBuffer();
+    _display->setFont(u8g2_font_6x12_tr);
+    _display->drawStr(20, 36, "Rebooting...");
+    _display->sendBuffer();
+    delay(600);
+    ESP.restart();
 }
 
 void Menu::render()
@@ -149,15 +163,18 @@ void Menu::renderStatus()
         _display->drawStr(95, 58, "v4");
     }
 
-    // joinStatus
-    if (joinStatus != EV_JOINED)
+    // LoRa link status
+    _display->setFont(u8g2_font_4x6_tr);
+    if (!_systemPrefs->getBool("loraEnabled", true))
     {
-        _display->setFont(u8g2_font_4x6_tr);
+        _display->drawStr(1, 10, "LoRa Off");
+    }
+    else if (joinStatus != EV_JOINED)
+    {
         _display->drawStr(1, 10, "Joining...");
     }
     else
     {
-        _display->setFont(u8g2_font_4x6_tr);
         _display->drawStr(1, 10, "Connected");
     }
 
@@ -197,13 +214,14 @@ void Menu::renderMenu()
     strcpy(labels[static_cast<uint8_t>(MenuItem::ResetTagCache)], "Reset Tag Cache");
     sprintf(labels[static_cast<uint8_t>(MenuItem::ToggleWifi)], "WiFi: %s", wifiEnabled ? "ON" : "OFF");
     sprintf(labels[static_cast<uint8_t>(MenuItem::ToggleLora)], "LoRa: %s", loraEnabled ? "ON" : "OFF");
+    strcpy(labels[static_cast<uint8_t>(MenuItem::Reboot)], "Reboot");
     strcpy(labels[static_cast<uint8_t>(MenuItem::Exit)], "Exit");
 
     _display->setFont(u8g2_font_6x12_tr);
 
     const uint8_t itemCount = static_cast<uint8_t>(MenuItem::Count);
-    const int rowHeight = 13;
-    const int startY = 12;
+    const int rowHeight = 12;
+    const int startY = 11;
 
     for (uint8_t i = 0; i < itemCount; i++)
     {

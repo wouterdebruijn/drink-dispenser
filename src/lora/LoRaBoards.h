@@ -67,6 +67,10 @@ void disablePeripherals();
 
 bool beginPower();
 
+// Enable/disable only the LoRa radio VDD rail. Cutting it fully unpowers the
+// SX1276 modem to save power when LoRa is disabled.
+void setRadioPower(bool enable);
+
 void printResult(bool radio_online);
 
 void flashLed();

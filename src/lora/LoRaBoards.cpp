@@ -310,6 +310,40 @@ void disablePeripherals()
 #endif
 }
 
+void setRadioPower(bool enable)
+{
+#ifdef HAS_PMU
+    if (!PMU)
+    {
+        return;
+    }
+
+    // LoRa VDD lives on ALDO2 (AXP2101) or LDO2 (AXP192).
+    if (PMU->getChipModel() == XPOWERS_AXP2101)
+    {
+        if (enable)
+        {
+            PMU->enablePowerOutput(XPOWERS_ALDO2);
+        }
+        else
+        {
+            PMU->disablePowerOutput(XPOWERS_ALDO2);
+        }
+    }
+    else if (PMU->getChipModel() == XPOWERS_AXP192)
+    {
+        if (enable)
+        {
+            PMU->enablePowerOutput(XPOWERS_LDO2);
+        }
+        else
+        {
+            PMU->disablePowerOutput(XPOWERS_LDO2);
+        }
+    }
+#endif
+}
+
 void loopPMU(void (*pressed_cb)(void))
 {
 #ifdef HAS_PMU
