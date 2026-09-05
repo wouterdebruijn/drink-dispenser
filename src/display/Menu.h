@@ -72,4 +72,7 @@ private:
     Screen _screen = Screen::Status;
     uint8_t _selectedIndex = 0;
     uint8_t _pumpProgress = 0;
+    // Set when the tag cache is reset; shows an "OK" on the menu item until the
+    // menu is closed.
+    bool _tagsReset = false;
 };

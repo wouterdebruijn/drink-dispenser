@@ -72,6 +72,7 @@ void Menu::openMenu()
 {
     _screen = Screen::Menu;
     _selectedIndex = 0;
+    _tagsReset = false; // Clear the "OK" confirmation from any previous session.
     render();
 }
 
@@ -81,6 +82,7 @@ void Menu::selectCurrentItem()
     {
     case MenuItem::ResetTagCache:
         _rfidStorage->clearTagData();
+        _tagsReset = true;
         break;
 
     case MenuItem::CycleMode:
@@ -251,7 +253,7 @@ void Menu::renderStatus()
 void Menu::renderMenu()
 {
     char labels[static_cast<uint8_t>(MenuItem::Count)][20];
-    strcpy(labels[static_cast<uint8_t>(MenuItem::ResetTagCache)], "Reset Tag Cache");
+    strcpy(labels[static_cast<uint8_t>(MenuItem::ResetTagCache)], _tagsReset ? "Reset Tag Cache OK" : "Reset Tag Cache");
     sprintf(labels[static_cast<uint8_t>(MenuItem::CycleMode)], "Mode: %s", modeName());
     strcpy(labels[static_cast<uint8_t>(MenuItem::Reboot)], "Reboot");
     strcpy(labels[static_cast<uint8_t>(MenuItem::Exit)], "Exit");
