@@ -82,6 +82,7 @@ void Menu::selectCurrentItem()
     {
     case MenuItem::ResetTagCache:
         _rfidStorage->clearTagData();
+        _rfidStorage->storeTagData(); // Persist the cleared state to flash
         _tagsReset = true;
         break;
 
@@ -154,6 +155,7 @@ const char *Menu::modeName()
 
 void Menu::reboot()
 {
+    _rfidStorage->storeTagData(); // Persist any changes to flash before rebooting
     _display->clearBuffer();
     _display->setFont(u8g2_font_6x12_tr);
     _display->drawStr(20, 36, "Rebooting...");
@@ -200,27 +202,57 @@ void Menu::renderStatus()
         _display->drawStr(19, 58, "Shot Machine");
 
         _display->setFont(u8g2_font_5x8_tr);
-        _display->drawStr(95, 58, "v4");
+        _display->drawStr(95, 58, "v5");
     }
 
-    // Connectivity mode status. Only one of AP / WiFi / LoRa is ever active;
-    // otherwise the device is offline.
-    _display->setFont(u8g2_font_4x6_tr);
+    // Connectivity mode indicator, drawn as an icon in the top-right corner.
+    // Only one of AP / WiFi / LoRa is ever active; otherwise the device is
+    // offline. While a link is still coming up, a row of dots is drawn under
+    // the icon to signal the connecting phase.
+    const uint8_t *icon;
+    uint8_t iconW;
+    uint8_t iconH;
+    bool connecting = false;
+
     if (_systemPrefs->getBool("wifiApEnabled", false))
     {
-        _display->drawStr(1, 10, "AP Config");
+        icon = ap_bitmap;
+        iconW = 6;
+        iconH = 6;
     }
     else if (_systemPrefs->getBool("wifiEnabled", false))
     {
-        _display->drawStr(1, 10, WiFi.status() == WL_CONNECTED ? "WiFi Connected" : "WiFi...");
+        icon = wifi_bitmap;
+        iconW = 6;
+        iconH = 6;
+        connecting = WiFi.status() != WL_CONNECTED;
     }
     else if (_systemPrefs->getBool("loraEnabled", true))
     {
-        _display->drawStr(1, 10, joinStatus == EV_JOINED ? "LoRa Connected" : "LoRa Joining...");
+        icon = lora_bitmap;
+        iconW = 7;
+        iconH = 6;
+        connecting = joinStatus != EV_JOINED;
     }
     else
     {
-        _display->drawStr(1, 10, "Offline");
+        icon = offline_bitmap;
+        iconW = 5;
+        iconH = 5;
+    }
+
+    const uint8_t iconY = 3;
+    const uint8_t iconX = 3; // Draw top left
+    _display->drawXBM(iconX, iconY, iconW, iconH, icon);
+
+    if (connecting)
+    {
+        // Three dots centered under the icon as a "connecting..." hint.
+        const uint8_t dotY = iconY + iconH + 2;
+        const uint8_t centerX = iconX + iconW / 2;
+        _display->drawBox(centerX - 3, dotY, 1, 1);
+        _display->drawBox(centerX, dotY, 1, 1);
+        _display->drawBox(centerX + 3, dotY, 1, 1);
     }
 
     if (_pumpProgress > 0)
@@ -247,6 +279,13 @@ void Menu::renderStatus()
     else
     {
         _display->drawXBM(46, 7, 36, 39, shot_glass_frame_0);
+
+        // A scan is being confirmed: overlay an hourglass on the empty glass.
+        // Cleared automatically once the pump animation starts or the scan aborts.
+        if (_rfidReader->isConfirmingTag())
+        {
+            _display->drawXBM(58, 19, 13, 12, hourglass_bitmap);
+        }
     }
 }
 
