@@ -19,12 +19,16 @@
 #include "display/Display.h"
 #include "peripherals/Pump.h"
 
+#include "wifi/WifiClient.h"
+#include "wifi/HttpServer.h"
+
 int freeMemory() { return ESP.getFreeHeap(); }
 void enablePumpForDuration();
 
 Scheduler ts;
-Preferences mySketchPrefs;
-RfidStorage rfidStorage(mySketchPrefs);
+Preferences systemPrefs;
+Preferences rfidStoragePrefs;
+RfidStorage rfidStorage(rfidStoragePrefs);
 
 HardwareSerial SerialRF(2);
 RfidReader rfidReader(&SerialRF, RFID_ENABLE_PIN, &rfidStorage, &enablePumpForDuration);
@@ -34,10 +38,12 @@ Display display;
 void pumpTimerCallback();
 void pumpDisableCallback();
 void displayLoop();
+void rfidLoop();
 
 #define PUMP_STEP_COUNT 6
 Task pumpOffTask(100 * TASK_MILLISECOND, PUMP_STEP_COUNT * 4, &pumpTimerCallback, &ts, false, NULL, &pumpDisableCallback);
 Task displayTask(10000 * TASK_MILLISECOND, TASK_FOREVER, &displayLoop, &ts, true);
+Task rfidTask(250 * TASK_MILLISECOND, TASK_FOREVER, &rfidLoop, &ts, true);
 
 uint8_t pump_dispense_counter = 0;
 
@@ -134,16 +140,22 @@ void displayLoop()
   display.sendBuffer();
 }
 
-Task rfidTask(250 * TASK_MILLISECOND, TASK_FOREVER, &rfidLoop, &ts, true);
-
 void setup()
 {
+  systemPrefs.begin("system", false);
+
+  bool loraEnabled = systemPrefs.getBool("loraEnabled", true);
+
   setupBoards();
   // When the power is turned on, a delay is required.
   delay(1500);
-  setupLMIC(&rfidStorage);
 
-  mySketchPrefs.begin("rfid", false);
+  if (loraEnabled)
+  {
+    setupLMIC(&rfidStorage);
+  }
+
+  rfidStoragePrefs.begin("rfid", false);
   rfidStorage.begin();
 
   rfidReader.begin();
