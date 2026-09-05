@@ -5,6 +5,7 @@
 
 #define RFID_ENABLE_PIN 14
 #define PUMP_PIN 25
+#define MENU_BUTTON_PIN 15
 
 #include <Arduino.h>
 #include <TaskScheduler.h>
@@ -17,6 +18,8 @@
 #include "rfid/RfidStorage.h"
 
 #include "display/Display.h"
+#include "display/Button.h"
+#include "display/Menu.h"
 #include "peripherals/Pump.h"
 
 #include "wifi/WifiClient.h"
@@ -34,6 +37,8 @@ HardwareSerial SerialRF(2);
 RfidReader rfidReader(&SerialRF, RFID_ENABLE_PIN, &rfidStorage, &enablePumpForDuration);
 Pump pump(PUMP_PIN);
 Display display;
+Button menuButton(MENU_BUTTON_PIN);
+Menu menu(&menuButton, &display, &rfidReader, &rfidStorage, &systemPrefs, &enablePumpForDuration);
 
 void pumpTimerCallback();
 void pumpDisableCallback();
@@ -42,7 +47,7 @@ void rfidLoop();
 
 #define PUMP_STEP_COUNT 6
 Task pumpOffTask(100 * TASK_MILLISECOND, PUMP_STEP_COUNT * 4, &pumpTimerCallback, &ts, false, NULL, &pumpDisableCallback);
-Task displayTask(10000 * TASK_MILLISECOND, TASK_FOREVER, &displayLoop, &ts, true);
+Task displayTask(10000 * TASK_MILLISECOND, TASK_FOREVER, &displayLoop, &ts, false);
 Task rfidTask(250 * TASK_MILLISECOND, TASK_FOREVER, &rfidLoop, &ts, true);
 
 uint8_t pump_dispense_counter = 0;
@@ -52,11 +57,14 @@ void pumpDisableCallback()
   Serial.println("Pump disabled");
   pump.disablePump();
   pump_dispense_counter = 0;
+  menu.setPumpProgress(0);
+  displayLoop();
 }
 
 void pumpTimerCallback()
 {
   pump_dispense_counter++;
+  menu.setPumpProgress(pump_dispense_counter);
   displayLoop();
 }
 
@@ -74,70 +82,9 @@ void rfidLoop()
 
 void displayLoop()
 {
-  display.clearBuffer();
-  display.setFontMode(1);
-  display.setBitmapMode(1);
-
-  if (rfidReader.getLastTagId() != 0)
-  {
-    uint16_t tagId = rfidReader.getLastTagId();
-    uint16_t tagCount = rfidReader.getLastTagCount();
-
-    // Display tag ID as decimal
-    char tagIdStr[20];
-    sprintf(tagIdStr, "Cheers #%d (%d)", tagId, tagCount / 20);
-
-    display.setFont(u8g2_font_6x12_tr);
-    display.drawStr(10, 58, tagIdStr);
-  }
-  else
-  {
-    display.setFont(u8g2_font_6x12_tr);
-    display.drawStr(19, 58, "Shot Machine");
-
-    display.setFont(u8g2_font_5x8_tr);
-    display.drawStr(95, 58, "v4");
-  }
-
-  // joinStatus
-  if (joinStatus != EV_JOINED)
-  {
-    display.setFont(u8g2_font_4x6_tr);
-    display.drawStr(1, 10, "Joining...");
-  }
-  else
-  {
-    display.setFont(u8g2_font_4x6_tr);
-    display.drawStr(1, 10, "Connected");
-  }
-
-  if (pump_dispense_counter > 0)
-  {
-    switch (pump_dispense_counter / 6)
-    {
-    case 0:
-      display.drawXBM(46, 7, 36, 39, shot_glass_frame_1);
-      break;
-    case 1:
-      display.drawXBM(46, 7, 36, 39, shot_glass_frame_2);
-      break;
-    case 2:
-      display.drawXBM(46, 7, 36, 39, shot_glass_frame_3);
-      break;
-    case 3:
-      display.drawXBM(46, 7, 36, 39, shot_glass_frame_4);
-      break;
-    default:
-      display.drawXBM(46, 7, 36, 39, shot_glass_frame_0);
-      break;
-    }
-  }
-  else
-  {
-    display.drawXBM(46, 7, 36, 39, shot_glass_frame_0);
-  }
-
-  display.sendBuffer();
+  // Rendering now lives in the Menu class; this stays as the entry point used
+  // by the periodic display task and the pump animation callbacks.
+  menu.render();
 }
 
 void setup()
@@ -150,10 +97,10 @@ void setup()
   // When the power is turned on, a delay is required.
   delay(1500);
 
-  if (loraEnabled)
-  {
-    setupLMIC(&rfidStorage);
-  }
+  // if (loraEnabled)
+  // {
+  setupLMIC(&rfidStorage);
+  // }
 
   rfidStoragePrefs.begin("rfid", false);
   rfidStorage.begin();
@@ -163,9 +110,12 @@ void setup()
   display.begin();
   display.startupText();
 
+  menu.begin();
+
   delay(1000);
 
   displayLoop();
+  displayTask.enable();
 }
 
 bool rfidScheduled = false;
@@ -174,5 +124,6 @@ void loop()
 {
   loopLMIC();
   rfidReader.parseSerial();
+  menu.loop();
   ts.execute();
 }

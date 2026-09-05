@@ -1,30 +1,54 @@
 #include "Button.h"
 
-Button::Button(uint8_t pin) : _pin(pin), _lastState(false), _callback(nullptr) {}
-
-Button::~Button() {}
-
 void Button::begin()
 {
     pinMode(_pin, INPUT_PULLUP);
 }
 
-void Button::loop()
+ButtonEvent Button::poll()
 {
-    bool currentState = digitalRead(_pin) == LOW;
+    // Active low: pressed when the pin reads LOW.
+    bool rawState = digitalRead(_pin) == LOW;
+    unsigned long now = millis();
 
-    if (currentState != _lastState)
+    // Debounce: only accept a new stable state after the bounce window.
+    if (rawState != _debouncedState)
     {
-        _lastState = currentState;
-
-        if (currentState && _callback)
+        if (now - _lastChange >= DEBOUNCE_MS)
         {
-            _callback();
+            _debouncedState = rawState;
+            _lastChange = now;
+
+            if (_debouncedState)
+            {
+                // Press started.
+                _pressed = true;
+                _holdFired = false;
+                _pressStart = now;
+            }
+            else if (_pressed)
+            {
+                // Released. A short press that never reached the hold
+                // threshold counts as a click.
+                _pressed = false;
+                if (!_holdFired)
+                {
+                    return ButtonEvent::Click;
+                }
+            }
         }
     }
-}
+    else
+    {
+        _lastChange = now;
+    }
 
-void Button::subscribe(void (*callback)(void))
-{
-    _callback = callback;
+    // Fire the hold event once while the button is still held down.
+    if (_pressed && !_holdFired && (now - _pressStart >= _holdDurationMs))
+    {
+        _holdFired = true;
+        return ButtonEvent::Hold;
+    }
+
+    return ButtonEvent::None;
 }
