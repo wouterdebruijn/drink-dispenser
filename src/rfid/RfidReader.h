@@ -6,6 +6,11 @@
 #define NO_TAG_LOCKOUT_THRESHOLD 30
 // Amount of times a tag needs to be seen before the pump is triggered.
 #define TAG_CONFIRM_COUNT 3
+#define RFID_TX_POWER 0x05DC // 0x05DC = 1500 = 15.00 dBm
+
+#define RFID_MIXER_GAIN 0x02         // mixer gain index (higher = more gain)
+#define RFID_IF_GAIN 0x06            // IF amplifier gain index (0x07 = max)
+#define RFID_SIGNAL_THRESHOLD 0x00A0 // detection threshold (lower = more sensitive)
 // #define DEBUG_RFID
 
 typedef void (*PumpOnEnable)();

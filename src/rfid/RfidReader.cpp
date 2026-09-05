@@ -9,6 +9,7 @@ void RfidReader::begin()
 {
     uint8_t REGION_SET = 0;
     uint8_t POWER_SET = 0;
+    uint8_t POWER_READ = 0;
     uint8_t MODEM_SET = 0;
 
     // Reset the RFID reader by toggling the enable pin.
@@ -40,18 +41,34 @@ void RfidReader::begin()
 
     while (POWER_SET != 255)
     {
-        bool success = rfc.SetPaPowerFrame(0xC880); // 0xC880 = 2dBm
+        bool success = rfc.SetPaPowerFrame(RFID_TX_POWER);
         POWER_SET = success ? 255 : POWER_SET + 1;
 
-        Serial.print("Setting power to 0x07D0 dBm: ");
+        Serial.print("Setting power to RFID_TX_POWER: ");
         Serial.println(success ? "SUCCESS" : "Fail");
 
         delay(500);
     }
 
+#ifdef DEBUG_RFID
+    while (POWER_READ != 255)
+    {
+        // Read back the effective power the module actually stored. Out-of-range
+        // requests are clamped/masked by the module, so this reports the real value.
+        uint16_t power = rfc.GetPaPowerFrame(); // raw centi-dBm; 0 on no response
+        bool success = power != 0;
+        POWER_READ = success ? 255 : POWER_READ + 1;
+
+        Serial.print("Effective power (centi-dBm): ");
+        Serial.println(success ? String(power) : "Fail");
+
+        delay(500);
+    }
+#endif
+
     while (MODEM_SET != 255)
     {
-        bool success = rfc.SetDemodulatorParameterFrame({0x02, 0x06, 0x00A0});
+        bool success = rfc.SetDemodulatorParameterFrame({RFID_MIXER_GAIN, RFID_IF_GAIN, RFID_SIGNAL_THRESHOLD});
         MODEM_SET = success ? 255 : MODEM_SET + 1;
 
         Serial.print("Setting modem parameters: ");
