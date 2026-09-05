@@ -107,6 +107,11 @@ void RfidReader::loop()
 #ifdef DEBUG_RFID
             Serial.println("No tag found.");
 #endif
+            // A single missed read breaks the streak; the glass was not solidly
+            // under the outlet, so any in-progress confirmation is discarded.
+            pendingTagId = 0;
+            pendingCount = 0;
+
             if (lastTagId != 0)
             {
                 noTagCount++;
@@ -124,6 +129,8 @@ void RfidReader::loop()
     else if (isReading > 10)
     {
         isReading = 0;
+        pendingTagId = 0; // Drop any in-progress confirmation on a stalled scan.
+        pendingCount = 0;
         Serial.println("Timeout waiting for inventory data.");
     }
 }
@@ -142,20 +149,55 @@ void RfidReader::handleTag(const Inventory_t &label)
         return;
     }
 
-    if (value > 0 && value < 20)
+    // Only tags in the valid range or the special pump-only tag can trigger.
+    bool isTriggerTag = (value > 0 && value < 20) || value == 0xFFFF;
+    if (!isTriggerTag)
     {
-        uint16_t count = storage->incrementTagCount(value, 20); // TODO change to variable from Lora
-
-        pumpEnable();
-
-        lastTagId = value;
-        lastTagCount = count;
+        // Anything else breaks the streak.
+        pendingTagId = 0;
+        pendingCount = 0;
+        return;
     }
-    else if (value == 0xFFFF)
+
+    // Require the same tag on TAG_CONFIRM_COUNT consecutive scans before dispensing.
+    if (pendingTagId != value)
+    {
+        // New candidate; start a fresh streak at one.
+        pendingTagId = value;
+        pendingCount = 1;
+    }
+    else
+    {
+        pendingCount++;
+    }
+
+#ifdef DEBUG_RFID
+    Serial.printf("Tag %u confirmation %u/%u\n", value, pendingCount, TAG_CONFIRM_COUNT);
+#endif
+
+    if (pendingCount < TAG_CONFIRM_COUNT)
+    {
+        // Not enough consecutive confirmations yet.
+        return;
+    }
+
+    // Confirmed across the full streak.
+    pendingTagId = 0;
+    pendingCount = 0;
+
+    if (value == 0xFFFF)
     {
         // Special tag only pump
         pumpEnable();
+        return;
     }
+
+    uint16_t count = storage->incrementTagCount(value, 20); // TODO change to variable from Lora
+
+    pumpEnable();
+
+    lastTagId = value;
+    lastTagCount = count;
 }
 
 void RfidReader::disableLockout()

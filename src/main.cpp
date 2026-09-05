@@ -68,7 +68,7 @@ void rfidLoop();
 #define PUMP_STEP_COUNT 6
 Task pumpOffTask(100 * TASK_MILLISECOND, PUMP_STEP_COUNT * 4, &pumpTimerCallback, &ts, false, NULL, &pumpDisableCallback);
 Task displayTask(10000 * TASK_MILLISECOND, TASK_FOREVER, &displayLoop, &ts, false);
-Task rfidTask(250 * TASK_MILLISECOND, TASK_FOREVER, &rfidLoop, &ts, true);
+Task rfidTask(150 * TASK_MILLISECOND, TASK_FOREVER, &rfidLoop, &ts, true);
 
 uint8_t pump_dispense_counter = 0;
 
@@ -95,9 +95,21 @@ void enablePumpForDuration()
   pumpOffTask.restartDelayed();
 }
 
+bool lastConfirmingTag = false;
+
 void rfidLoop()
 {
   rfidReader.loop();
+
+  // Redraw immediately when the scan-confirmation state changes so the
+  // hourglass indicator appears on the first read and clears the moment the
+  // scan either succeeds (pump animation takes over) or aborts.
+  bool confirming = rfidReader.isConfirmingTag();
+  if (confirming != lastConfirmingTag)
+  {
+    lastConfirmingTag = confirming;
+    displayLoop();
+  }
 }
 
 void displayLoop()
